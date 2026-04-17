@@ -459,7 +459,7 @@ function LoopStudioPage() {
             </div>
           </div>
           {/* Bells all the way at the bottom, centered */}
-          <div className="flex justify-center mt-2">
+          <div className="flex justify-center -mt-4 pb-0">
             <BellsVisual activeNotes={activeBellNotes} />
           </div>
         </div>

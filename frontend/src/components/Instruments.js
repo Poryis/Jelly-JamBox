@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { BELLS } from './JellyBells';
 
@@ -81,8 +82,18 @@ export function PianoInstrument({ onPlayNote, pressedKeys, highlightedNote }) {
 
 // Drum kit - refined positioning
 export function DrumKitVisual({ activeHits }) {
-  // Use a counter to force re-render on each kick hit
-  const kickHit = activeHits?.has('kick');
+  // Dedicated kick flash state to guarantee image swap
+  const [kickFlash, setKickFlash] = useState(false);
+  const prevKickRef = useRef(false);
+  
+  useEffect(() => {
+    const isKicking = activeHits?.has('kick') || false;
+    if (isKicking && !prevKickRef.current) {
+      setKickFlash(true);
+      setTimeout(() => setKickFlash(false), 120);
+    }
+    prevKickRef.current = isKicking;
+  }, [activeHits]);
   
   return (
     <div className="relative mx-auto" style={{ width: '380px', height: '240px' }}>
@@ -104,9 +115,9 @@ export function DrumKitVisual({ activeHits }) {
         style={{ left: '0px', bottom: '20px', height: '160px', zIndex: 3 }}
         animate={activeHits?.has('hihat') ? { y: [0, 3, 0] } : {}} transition={{ duration: 0.1 }} />
 
-      {/* Kick - center. Idle=kICK 1, Hit=kICK 2 */}
+      {/* Kick - uses dedicated flash state */}
       <img
-        src={kickHit ? '/assets/drums/kICK 2.png' : '/assets/drums/kICK 1.png'}
+        src={kickFlash ? '/assets/drums/kICK 2.png' : '/assets/drums/kICK 1.png'}
         alt="Kick" className="absolute object-contain"
         style={{ left: '120px', bottom: '0px', width: '140px', zIndex: 3 }}
       />
