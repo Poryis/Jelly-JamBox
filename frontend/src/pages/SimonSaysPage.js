@@ -303,7 +303,8 @@ function SimonSaysPage({ score, setScore, gameStats, setGameStats, resetGame }) 
           animate={{ y: 0, opacity: 1 }}
         >
           <JellyBellsRow 
-            onPlayNote={handlePlayNote} 
+            onPlayNote={handlePlayNote}
+            onNoteUp={() => {}}
             highlightedNote={highlightedNote}
             showNotation={true}
           />

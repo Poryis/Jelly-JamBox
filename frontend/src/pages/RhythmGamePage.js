@@ -306,7 +306,7 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
             </AnimatePresence>
           </div>
 
-          {/* Bell images at bottom - like Free Play */}
+          {/* Bell images at bottom - press/release swap states */}
           <div className="absolute bottom-0 left-0 right-0 bg-white/95 border-t-4 border-[var(--jma-dark)] p-2">
             <div className="flex justify-center gap-1 md:gap-2">
               {activeBells.map(note => {
@@ -315,10 +315,13 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
                 return (
                   <motion.button key={note} data-testid={`game-bell-${note}`}
                     className="relative flex flex-col items-center"
-                    onPointerDown={(e) => { e.preventDefault(); handlePlayNote(note); }}
+                    onPointerDown={(e) => { e.preventDefault(); setPressedKeys(prev => new Set([...prev, bell?.key])); handlePlayNote(note); }}
+                    onPointerUp={(e) => { e.preventDefault(); setPressedKeys(prev => { const s = new Set(prev); s.delete(bell?.key); return s; }); }}
+                    onPointerLeave={() => { setPressedKeys(prev => { const s = new Set(prev); s.delete(bell?.key); return s; }); }}
                     animate={{ scale: isKeyPressed ? 0.9 : 1 }}
                     transition={{ type: 'spring', stiffness: 500 }}
                     whileHover={{ scale: 1.05 }}
+                    style={{ touchAction: 'manipulation' }}
                   >
                     <img
                       src={isKeyPressed ? bell?.image2 : bell?.image1}
