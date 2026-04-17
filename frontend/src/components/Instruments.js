@@ -82,19 +82,6 @@ export function PianoInstrument({ onPlayNote, pressedKeys, highlightedNote }) {
 
 // Drum kit - refined positioning
 export function DrumKitVisual({ activeHits }) {
-  // Dedicated kick flash state to guarantee image swap
-  const [kickFlash, setKickFlash] = useState(false);
-  const prevKickRef = useRef(false);
-  
-  useEffect(() => {
-    const isKicking = activeHits?.has('kick') || false;
-    if (isKicking && !prevKickRef.current) {
-      setKickFlash(true);
-      setTimeout(() => setKickFlash(false), 120);
-    }
-    prevKickRef.current = isKicking;
-  }, [activeHits]);
-  
   return (
     <div className="relative mx-auto" style={{ width: '380px', height: '240px' }}>
       {/* BACK: Crash */}
@@ -115,11 +102,13 @@ export function DrumKitVisual({ activeHits }) {
         style={{ left: '0px', bottom: '20px', height: '160px', zIndex: 3 }}
         animate={activeHits?.has('hihat') ? { y: [0, 3, 0] } : {}} transition={{ duration: 0.1 }} />
 
-      {/* Kick - uses dedicated flash state */}
-      <img
-        src={kickFlash ? '/assets/drums/kICK 2.png' : '/assets/drums/kICK 1.png'}
+      {/* Kick - center, pulses on hit */}
+      <motion.img
+        src="/assets/drums/kICK 1.png"
         alt="Kick" className="absolute object-contain"
         style={{ left: '120px', bottom: '0px', width: '140px', zIndex: 3 }}
+        animate={activeHits?.has('kick') ? { scale: [1, 0.94, 1] } : { scale: 1 }}
+        transition={{ duration: 0.12 }}
       />
 
       {/* Big tom (tom 2) - moved UP and RIGHT with the group */}
