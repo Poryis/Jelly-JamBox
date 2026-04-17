@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Play, Eye, RotateCcw } from 'lucide-react';
-import JellyBellsRow, { BELLS } from '../components/JellyBells';
+import JellyBellsRow, { BELLS, KEY_TO_NOTE } from '../components/JellyBells';
 import { GameHeader, FeedbackPopup, ProgressBar } from '../components/GameUI';
 import useAudio from '../hooks/useAudio';
 
@@ -146,6 +146,21 @@ function SimonSaysPage({ score, setScore, gameStats, setGameStats, resetGame }) 
     }
   }, [gameState, playerIndex, currentPattern, level, playBellNote, playFeedbackSound, setScore, setGameStats, navigate]);
 
+  // Keyboard controls for Simon Says
+  useEffect(() => {
+    if (gameState !== 'playing') return;
+
+    const handleKeyDown = (e) => {
+      const note = KEY_TO_NOTE[e.key];
+      if (note) {
+        handlePlayNote(note);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [gameState, handlePlayNote]);
+
   // Ready screen
   if (gameState === 'ready') {
     return (
@@ -153,7 +168,7 @@ function SimonSaysPage({ score, setScore, gameStats, setGameStats, resetGame }) 
         className="min-h-screen flex flex-col items-center justify-center p-4" 
         data-testid="simon-says-menu"
         style={{
-          backgroundImage: 'url(/assets/backgrounds/stage.png)',
+          backgroundImage: 'url(/assets/backgrounds/underwater.png)',
           backgroundSize: 'cover',
           backgroundPosition: 'center'
         }}
@@ -225,7 +240,7 @@ function SimonSaysPage({ score, setScore, gameStats, setGameStats, resetGame }) 
       className="min-h-screen flex flex-col" 
       data-testid="simon-says-playing"
       style={{
-        backgroundImage: 'url(/assets/backgrounds/stage.png)',
+        backgroundImage: 'url(/assets/backgrounds/underwater.png)',
         backgroundSize: 'cover',
         backgroundPosition: 'center'
       }}

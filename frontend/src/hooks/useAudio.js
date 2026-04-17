@@ -1,4 +1,4 @@
-// Audio hook for playing bell sounds
+// Audio hook for playing bell sounds - supports polyphonic playback
 import { useCallback, useRef, useEffect } from 'react';
 
 // Note frequencies for Web Audio API fallback
@@ -46,6 +46,10 @@ export function useAudio() {
     if (!audioContextRef.current) {
       audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
     }
+    // Resume if suspended (for autoplay policies)
+    if (audioContextRef.current.state === 'suspended') {
+      audioContextRef.current.resume();
+    }
     return audioContextRef.current;
   }, []);
 
@@ -56,7 +60,7 @@ export function useAudio() {
     const ctx = initAudioContext();
     const allFiles = { ...BELL_AUDIO_FILES, ...DRUM_AUDIO_FILES };
     
-    for (const [note, url] of Object.entries(allFiles)) {
+    const loadPromises = Object.entries(allFiles).map(async ([note, url]) => {
       try {
         const response = await fetch(url);
         const arrayBuffer = await response.arrayBuffer();
@@ -65,25 +69,28 @@ export function useAudio() {
       } catch (error) {
         console.warn(`Could not load audio for ${note}:`, error);
       }
-    }
+    });
+
+    await Promise.all(loadPromises);
     loadedRef.current = true;
   }, [initAudioContext]);
 
-  // Play a bell note using loaded audio or Web Audio API fallback
+  // Play a bell note - supports polyphonic playback (multiple notes at once)
   const playBellNote = useCallback((note) => {
     const ctx = initAudioContext();
-    
-    // Resume audio context if suspended (needed for autoplay policies)
-    if (ctx.state === 'suspended') {
-      ctx.resume();
-    }
 
     // Try to play loaded audio file
     const buffer = audioBuffersRef.current[note];
     if (buffer) {
+      // Create a NEW source node each time (allows polyphonic playback)
       const source = ctx.createBufferSource();
+      const gainNode = ctx.createGain();
+      
       source.buffer = buffer;
-      source.connect(ctx.destination);
+      gainNode.gain.setValueAtTime(0.7, ctx.currentTime);
+      
+      source.connect(gainNode);
+      gainNode.connect(ctx.destination);
       source.start(0);
       return;
     }
@@ -100,28 +107,29 @@ export function useAudio() {
 
     // Bell-like envelope
     gainNode.gain.setValueAtTime(0.5, ctx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.8);
 
     oscillator.connect(gainNode);
     gainNode.connect(ctx.destination);
 
     oscillator.start(ctx.currentTime);
-    oscillator.stop(ctx.currentTime + 1);
+    oscillator.stop(ctx.currentTime + 0.8);
   }, [initAudioContext]);
 
-  // Play drum sound
+  // Play drum sound - supports polyphonic playback
   const playDrumSound = useCallback((drum) => {
     const ctx = initAudioContext();
-    
-    if (ctx.state === 'suspended') {
-      ctx.resume();
-    }
 
     const buffer = audioBuffersRef.current[drum];
     if (buffer) {
       const source = ctx.createBufferSource();
+      const gainNode = ctx.createGain();
+      
       source.buffer = buffer;
-      source.connect(ctx.destination);
+      gainNode.gain.setValueAtTime(0.8, ctx.currentTime);
+      
+      source.connect(gainNode);
+      gainNode.connect(ctx.destination);
       source.start(0);
     }
   }, [initAudioContext]);
@@ -129,10 +137,6 @@ export function useAudio() {
   // Play success/feedback sound
   const playFeedbackSound = useCallback((type) => {
     const ctx = initAudioContext();
-    
-    if (ctx.state === 'suspended') {
-      ctx.resume();
-    }
 
     const oscillator = ctx.createOscillator();
     const gainNode = ctx.createGain();

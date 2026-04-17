@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Play, Pause, RotateCcw } from 'lucide-react';
-import JellyBellsRow, { BELLS } from '../components/JellyBells';
+import { BELLS, KEY_TO_NOTE } from '../components/JellyBells';
 import { GameHeader, FeedbackPopup, ProgressBar } from '../components/GameUI';
 import useAudio from '../hooks/useAudio';
 
@@ -24,6 +24,9 @@ const SONGS = {
     tempo: 500
   }
 };
+
+// Note order from LOW to HIGH for lane positioning
+const NOTE_ORDER = ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'High C'];
 
 function FallingNote({ note, onMiss, speed, laneIndex, totalLanes }) {
   const bell = BELLS.find(b => b.note === note);
@@ -58,13 +61,18 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
   const [fallingNotes, setFallingNotes] = useState([]);
   const [currentNoteIndex, setCurrentNoteIndex] = useState(0);
   const [feedback, setFeedback] = useState(null);
-  const [highlightedNote, setHighlightedNote] = useState(null);
+  const [pressedKeys, setPressedKeys] = useState(new Set());
   
   const gameLoopRef = useRef(null);
   const noteIdRef = useRef(0);
 
   const currentSong = SONGS[difficulty];
-  const activeBells = useMemo(() => [...new Set(currentSong.notes)], [currentSong.notes]);
+  
+  // Get unique notes used in the song, sorted from LOW to HIGH
+  const activeBells = useMemo(() => {
+    const uniqueNotes = [...new Set(currentSong.notes)];
+    return uniqueNotes.sort((a, b) => NOTE_ORDER.indexOf(a) - NOTE_ORDER.indexOf(b));
+  }, [currentSong.notes]);
 
   // Start game
   const startGame = useCallback(() => {
@@ -75,6 +83,67 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
     setFallingNotes([]);
     noteIdRef.current = 0;
   }, [initAudioContext, resetGame]);
+
+  // Handle bell tap (mouse/touch/keyboard)
+  const handlePlayNote = useCallback((tappedNote) => {
+    playBellNote(tappedNote);
+
+    // Check if there's a matching note in the target zone
+    const matchingNote = fallingNotes.find(n => 
+      n.note === tappedNote && !n.hit
+    );
+
+    if (matchingNote) {
+      // Hit! Calculate score based on timing
+      const points = 100;
+      setScore(prev => prev + points);
+      setGameStats(prev => ({
+        ...prev,
+        perfect: prev.perfect + 1,
+        streak: prev.streak + 1,
+        maxStreak: Math.max(prev.maxStreak, prev.streak + 1)
+      }));
+      
+      setFeedback('perfect');
+      playFeedbackSound('perfect');
+      
+      // Remove the hit note
+      setFallingNotes(prev => prev.filter(n => n.id !== matchingNote.id));
+    }
+
+    setTimeout(() => setFeedback(null), 500);
+  }, [fallingNotes, playBellNote, playFeedbackSound, setScore, setGameStats]);
+
+  // Keyboard controls for rhythm game (1-8 keys)
+  useEffect(() => {
+    if (gameState !== 'playing') return;
+
+    const handleKeyDown = (e) => {
+      const note = KEY_TO_NOTE[e.key];
+      if (note && activeBells.includes(note) && !pressedKeys.has(e.key)) {
+        setPressedKeys(prev => new Set([...prev, e.key]));
+        handlePlayNote(note);
+      }
+    };
+
+    const handleKeyUp = (e) => {
+      if (KEY_TO_NOTE[e.key]) {
+        setPressedKeys(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(e.key);
+          return newSet;
+        });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [gameState, activeBells, handlePlayNote, pressedKeys]);
 
   // Spawn notes
   useEffect(() => {
@@ -114,38 +183,6 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
     };
   }, [gameState, currentNoteIndex, currentSong, activeBells, navigate]);
 
-  // Handle bell tap
-  const handlePlayNote = useCallback((tappedNote) => {
-    playBellNote(tappedNote);
-    setHighlightedNote(tappedNote);
-    setTimeout(() => setHighlightedNote(null), 200);
-
-    // Check if there's a matching note in the target zone
-    const matchingNote = fallingNotes.find(n => 
-      n.note === tappedNote && !n.hit
-    );
-
-    if (matchingNote) {
-      // Hit! Calculate score based on timing
-      const points = 100;
-      setScore(prev => prev + points);
-      setGameStats(prev => ({
-        ...prev,
-        perfect: prev.perfect + 1,
-        streak: prev.streak + 1,
-        maxStreak: Math.max(prev.maxStreak, prev.streak + 1)
-      }));
-      
-      setFeedback('perfect');
-      playFeedbackSound('perfect');
-      
-      // Remove the hit note
-      setFallingNotes(prev => prev.filter(n => n.id !== matchingNote.id));
-    }
-
-    setTimeout(() => setFeedback(null), 500);
-  }, [fallingNotes, playBellNote, playFeedbackSound, setScore, setGameStats]);
-
   // Handle missed note
   const handleNoteMiss = useCallback((noteId) => {
     setFallingNotes(prev => {
@@ -164,6 +201,12 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
     });
   }, [playFeedbackSound, setGameStats]);
 
+  // Get key number for a note
+  const getNoteKey = (note) => {
+    const bell = BELLS.find(b => b.note === note);
+    return bell?.key || '';
+  };
+
   // Difficulty selection screen
   if (gameState === 'menu') {
     return (
@@ -180,13 +223,23 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
         </motion.h1>
 
         <motion.p
-          className="text-lg mb-8 text-center max-w-md"
+          className="text-lg mb-4 text-center max-w-md"
           style={{ color: 'var(--jma-dark)' }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
         >
           Hit the Jelly Bells when the notes reach the bottom!
+        </motion.p>
+
+        <motion.p
+          className="text-base mb-8 text-center max-w-md px-4 py-2 bg-white rounded-xl border-2 border-[var(--jma-dark)]"
+          style={{ color: 'var(--jma-dark)' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          <strong>Controls:</strong> Use keyboard keys 1-8, click, or tap!
         </motion.p>
 
         <div className="grid gap-4 w-full max-w-md">
@@ -256,7 +309,7 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
       {/* Game area */}
       <main className="flex-1 flex flex-col pt-24 pb-4 px-2 md:px-4">
         <div className="game-board flex-1 relative overflow-hidden">
-          {/* Lanes */}
+          {/* Lanes - ordered from LOW (left) to HIGH (right) */}
           <div className="rhythm-lanes">
             {activeBells.map((note, idx) => {
               const bell = BELLS.find(b => b.note === note);
@@ -289,22 +342,37 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
             </AnimatePresence>
           </div>
 
-          {/* Bell controls at bottom */}
+          {/* Bell controls at bottom - ordered LOW to HIGH */}
           <div className="absolute bottom-0 left-0 right-0 bg-white border-t-4 border-[var(--jma-dark)] p-2">
             <div className="flex justify-center gap-2">
               {activeBells.map(note => {
                 const bell = BELLS.find(b => b.note === note);
+                const isPressed = pressedKeys.has(bell?.key);
                 return (
                   <motion.button
                     key={note}
                     data-testid={`game-bell-${note}`}
-                    className="w-12 h-14 md:w-16 md:h-18 rounded-xl border-3 border-[var(--jma-dark)] flex items-center justify-center font-bold text-white text-sm md:text-base"
-                    style={{ backgroundColor: bell?.color }}
+                    className="relative w-12 h-14 md:w-16 md:h-18 rounded-xl border-3 border-[var(--jma-dark)] flex items-center justify-center font-bold text-white text-sm md:text-base"
+                    style={{ 
+                      backgroundColor: bell?.color,
+                      transform: isPressed ? 'scale(0.95)' : 'scale(1)'
+                    }}
                     onClick={() => handlePlayNote(note)}
+                    onMouseDown={() => handlePlayNote(note)}
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                      handlePlayNote(note);
+                    }}
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                   >
                     {bell?.solfege}
+                    {/* Key hint */}
+                    <span className="absolute -top-2 -right-1 w-5 h-5 rounded-full bg-white border border-[var(--jma-dark)] text-xs font-bold flex items-center justify-center"
+                      style={{ color: bell?.color }}
+                    >
+                      {bell?.key}
+                    </span>
                   </motion.button>
                 );
               })}
