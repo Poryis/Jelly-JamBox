@@ -6,7 +6,7 @@ import { BELLS } from '../components/JellyBells';
 import { GameHeader } from '../components/GameUI';
 import { PageCharacters } from '../components/PageCharacters';
 import { FullscreenButton } from '../components/FullscreenButton';
-import { DrumKitVisual } from '../components/Instruments';
+import { DrumKitVisual, BellsVisual } from '../components/Instruments';
 import useAudio from '../hooks/useAudio';
 
 const DEFAULT_BPM = 100;
@@ -120,6 +120,7 @@ function LoopStudioPage() {
   const [grid, setGrid] = useState({});
   const [mutedTracks, setMutedTracks] = useState(new Set());
   const [activeHits, setActiveHits] = useState(new Set());
+  const [activeBellNotes, setActiveBellNotes] = useState(new Set());
 
   const intervalRef = useRef(null);
   const gridRef = useRef(grid);
@@ -167,11 +168,15 @@ function LoopStudioPage() {
     const currentGrid = gridRef.current;
     const muted = mutedRef.current;
     const hits = new Set();
+    const bellHits = new Set();
     Object.entries(currentGrid).forEach(([trackId, steps]) => {
       if (muted.has(trackId)) return;
       if (steps[step]) {
         const preset = TRACK_PRESETS.find(p => p.id === trackId);
-        if (preset?.type === 'bell') playBellNote(preset.note);
+        if (preset?.type === 'bell') {
+          playBellNote(preset.note);
+          bellHits.add(preset.note);
+        }
         else if (preset?.type === 'drum' || preset?.type === 'scratch') {
           playDrumSound(preset.note);
           hits.add(preset.note);
@@ -179,8 +184,8 @@ function LoopStudioPage() {
       }
     });
     setActiveHits(hits);
-    // Clear hits after a short delay for visual
-    setTimeout(() => setActiveHits(new Set()), 100);
+    setActiveBellNotes(bellHits);
+    setTimeout(() => { setActiveHits(new Set()); setActiveBellNotes(new Set()); }, 100);
   }, [playBellNote, playDrumSound]);
 
   const togglePlay = useCallback(() => {
@@ -441,14 +446,17 @@ function LoopStudioPage() {
           </div>
         </div>
 
-        {/* Drum Kit Visual - shows animated drums */}
-        {isPlaying && (
-          <div className="max-w-6xl mx-auto mt-4">
-            <div className="game-card p-4 overflow-hidden">
-              <DrumKitVisual activeHits={activeHits} />
-            </div>
+        {/* Instruments in the scene - always visible */}
+        <div className="max-w-6xl mx-auto mt-3 flex items-end justify-between gap-4">
+          {/* Drum kit on left */}
+          <div className="flex-1 max-w-md">
+            <DrumKitVisual activeHits={activeHits} />
           </div>
-        )}
+          {/* Bells on right */}
+          <div className="flex-1 max-w-sm">
+            <BellsVisual activeNotes={activeBellNotes} />
+          </div>
+        </div>
       </main>
       <PageCharacters page="loop-studio" />
     </div>

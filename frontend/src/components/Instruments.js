@@ -113,80 +113,87 @@ export function PianoInstrument({ onPlayNote, pressedKeys, highlightedNote }) {
   );
 }
 
-// Animated drum kit for Loop Studio
+// Animated drum kit - positioned as a real drum set
 export function DrumKitVisual({ activeHits }) {
-  // activeHits is a Set of currently playing drum ids: 'kick', 'snare', 'hihat', 'crash', etc
   return (
-    <div className="relative w-full h-full" style={{ minHeight: '280px' }}>
+    <div className="relative" style={{ width: '100%', height: '220px' }}>
       {/* Hi-Hat - far left */}
       <motion.img
         src={activeHits?.has('hihat') ? '/assets/drums/Hi hat 2.png' : '/assets/drums/Hi hat 1.png'}
-        alt="Hi-Hat"
-        className="absolute object-contain"
-        style={{ left: '2%', bottom: '25%', width: '14%', zIndex: 2 }}
-        animate={activeHits?.has('hihat') ? { scale: [1, 0.92, 1] } : {}}
-        transition={{ duration: 0.12 }}
+        alt="Hi-Hat" className="absolute object-contain"
+        style={{ left: '5%', bottom: '10%', height: '65%', zIndex: 2 }}
+        animate={activeHits?.has('hihat') ? { y: [0, 3, 0] } : {}}
+        transition={{ duration: 0.1 }}
       />
-
-      {/* Snare - left of kick */}
+      {/* Snare - left of center */}
       <motion.img
         src={activeHits?.has('snare') ? '/assets/drums/Snare 2.png' : '/assets/drums/Snare 1.png'}
-        alt="Snare"
-        className="absolute object-contain"
-        style={{ left: '16%', bottom: '15%', width: '18%', zIndex: 3 }}
-        animate={activeHits?.has('snare') ? { scale: [1, 0.93, 1] } : {}}
-        transition={{ duration: 0.12 }}
+        alt="Snare" className="absolute object-contain"
+        style={{ left: '20%', bottom: '5%', height: '50%', zIndex: 3 }}
+        animate={activeHits?.has('snare') ? { scale: [1, 0.95, 1] } : {}}
+        transition={{ duration: 0.1 }}
       />
-
-      {/* Tom 1 - above kick left */}
+      {/* Tom 1 - above-left of kick */}
       <motion.img
         src={activeHits?.has('tom') ? '/assets/drums/tOM 1 2.png' : '/assets/drums/tOM 1 1.png'}
-        alt="Tom 1"
-        className="absolute object-contain"
-        style={{ left: '30%', bottom: '50%', width: '16%', zIndex: 4 }}
-        animate={activeHits?.has('tom') ? { scale: [1, 0.93, 1] } : {}}
-        transition={{ duration: 0.12 }}
+        alt="Tom 1" className="absolute object-contain"
+        style={{ left: '33%', bottom: '40%', height: '40%', zIndex: 5 }}
+        animate={activeHits?.has('tom') ? { scale: [1, 0.95, 1] } : {}}
+        transition={{ duration: 0.1 }}
       />
-
-      {/* Tom 2 - above kick right */}
+      {/* Tom 2 - above-right of kick */}
       <motion.img
         src={activeHits?.has('lowTom') ? '/assets/drums/tOM 2 2.png' : '/assets/drums/tOM 2 1.png'}
-        alt="Tom 2"
-        className="absolute object-contain"
-        style={{ right: '30%', bottom: '50%', width: '16%', zIndex: 4 }}
-        animate={activeHits?.has('lowTom') ? { scale: [1, 0.93, 1] } : {}}
-        transition={{ duration: 0.12 }}
+        alt="Tom 2" className="absolute object-contain"
+        style={{ right: '33%', bottom: '40%', height: '40%', zIndex: 5 }}
+        animate={activeHits?.has('lowTom') ? { scale: [1, 0.95, 1] } : {}}
+        transition={{ duration: 0.1 }}
       />
-
-      {/* Kick drum - center */}
+      {/* Kick drum - center bottom */}
       <motion.img
         src={activeHits?.has('kick') ? '/assets/drums/kICK 2.png' : '/assets/drums/kICK 1.png'}
-        alt="Kick"
-        className="absolute object-contain"
-        style={{ left: '50%', bottom: '5%', width: '30%', transform: 'translateX(-50%)', zIndex: 2 }}
-        animate={activeHits?.has('kick') ? { scale: [1, 0.95, 1] } : {}}
-        transition={{ duration: 0.12 }}
+        alt="Kick" className="absolute object-contain"
+        style={{ left: '50%', bottom: '0%', height: '70%', transform: 'translateX(-50%)', zIndex: 4 }}
+        animate={activeHits?.has('kick') ? { scale: [1, 0.97, 1] } : {}}
+        transition={{ duration: 0.1 }}
       />
-
-      {/* Ride - right of kick */}
+      {/* Ride - right of center */}
       <motion.img
         src={activeHits?.has('ride') ? '/assets/drums/Ride 2.png' : '/assets/drums/Ride 1.png'}
-        alt="Ride"
-        className="absolute object-contain"
-        style={{ right: '16%', bottom: '15%', width: '18%', zIndex: 3 }}
-        animate={activeHits?.has('ride') ? { scale: [1, 0.93, 1] } : {}}
-        transition={{ duration: 0.12 }}
+        alt="Ride" className="absolute object-contain"
+        style={{ right: '20%', bottom: '5%', height: '50%', zIndex: 3 }}
+        animate={activeHits?.has('ride') ? { scale: [1, 0.95, 1] } : {}}
+        transition={{ duration: 0.1 }}
       />
-
-      {/* Crash - far right, high */}
+      {/* Crash - far right */}
       <motion.img
         src={activeHits?.has('crash') ? '/assets/drums/Crash 2.png' : '/assets/drums/Crash 1.png'}
-        alt="Crash"
-        className="absolute object-contain"
-        style={{ right: '2%', bottom: '25%', width: '14%', zIndex: 2 }}
-        animate={activeHits?.has('crash') ? { scale: [1, 0.9, 1], rotate: [0, -5, 0] } : {}}
-        transition={{ duration: 0.15 }}
+        alt="Crash" className="absolute object-contain"
+        style={{ right: '5%', bottom: '10%', height: '65%', zIndex: 2 }}
+        animate={activeHits?.has('crash') ? { rotate: [0, -4, 0] } : {}}
+        transition={{ duration: 0.12 }}
       />
+    </div>
+  );
+}
+
+// Animated bells row for Loop Studio
+export function BellsVisual({ activeNotes }) {
+  return (
+    <div className="flex justify-center items-end gap-1">
+      {BELLS.map(bell => {
+        const isHit = activeNotes?.has(bell.note);
+        return (
+          <motion.img
+            key={bell.note}
+            src={isHit ? bell.image2 : bell.image1}
+            alt={bell.solfege}
+            className="w-10 h-12 md:w-12 md:h-14 object-contain"
+            animate={isHit ? { scale: [1, 0.9, 1] } : {}}
+            transition={{ duration: 0.1 }}
+          />
+        );
+      })}
     </div>
   );
 }

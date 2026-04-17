@@ -26,7 +26,7 @@ export function FullscreenButton() {
   return (
     <motion.button
       data-testid="fullscreen-button"
-      className="fixed top-3 left-16 z-50 chunky-btn bg-white p-2.5"
+      className="fixed top-3 right-3 z-50 chunky-btn bg-white p-2.5"
       onClick={toggleFullscreen}
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.95 }}
