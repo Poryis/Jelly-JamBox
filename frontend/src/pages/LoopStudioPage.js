@@ -149,11 +149,19 @@ function LoopStudioPage() {
     setGrid(prev => {
       const newGrid = { ...prev };
       const track = [...(newGrid[trackId] || new Array(totalSteps).fill(0))];
-      track[step] = track[step] ? 0 : 1;
+      const wasActive = track[step];
+      track[step] = wasActive ? 0 : 1;
       newGrid[trackId] = track;
+      // Play sound when activating a cell
+      if (!wasActive) {
+        initAudioContext();
+        const preset = TRACK_PRESETS.find(p => p.id === trackId);
+        if (preset?.type === 'bell') playBellNote(preset.note);
+        else if (preset?.type === 'drum' || preset?.type === 'scratch') playDrumSound(preset.note);
+      }
       return newGrid;
     });
-  }, [totalSteps]);
+  }, [totalSteps, initAudioContext, playBellNote, playDrumSound]);
 
   // Play a sound for preview
   const previewSound = useCallback((trackId) => {
@@ -459,7 +467,7 @@ function LoopStudioPage() {
             </div>
           </div>
           {/* Bells all the way at the bottom, centered */}
-          <div className="flex justify-center -mt-4 pb-0">
+          <div className="flex justify-center -mt-8">
             <BellsVisual activeNotes={activeBellNotes} />
           </div>
         </div>

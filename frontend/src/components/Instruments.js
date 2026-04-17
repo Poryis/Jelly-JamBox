@@ -180,9 +180,9 @@ export function TurntableVisual({ activeHits }) {
 // Bells visual for Loop Studio - 2x bigger, at the very bottom
 export function BellsVisual({ activeNotes }) {
   return (
-    <div className="relative">
-      <div className="absolute inset-0 -inset-x-4 -inset-y-3 bg-white/40 rounded-2xl backdrop-blur-sm" />
-      <div className="flex justify-center items-end gap-2 relative z-10 p-3">
+    <div className="relative inline-block">
+      <div className="absolute inset-0 -inset-x-2 -inset-y-1 bg-white/40 rounded-xl backdrop-blur-sm" />
+      <div className="flex justify-center items-end gap-0 relative z-10 px-1 py-1">
         {BELLS.map(bell => {
           const isHit = activeNotes?.has(bell.note);
           return (
@@ -190,7 +190,7 @@ export function BellsVisual({ activeNotes }) {
               src={isHit ? bell.image2 : bell.image1}
               alt={bell.solfege}
               className="object-contain"
-              style={{ width: '100px', height: '115px' }}
+              style={{ width: '100px', height: '115px', margin: '0 -4px' }}
               animate={isHit ? { scale: [1, 0.88, 1] } : {}}
               transition={{ duration: 0.1 }}
             />
