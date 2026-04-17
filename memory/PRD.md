@@ -1,64 +1,43 @@
 # Jelly Bells Rhythm Game - PRD
 
 ## Original Problem Statement
-Build a rhythm game for music education platform "Jelly of the Month Club Music Academy" (JMA). Target audience: young children (early elementary). Must use custom artwork and sounds provided by user.
+Build a rhythm game for "Jelly of the Month Club Music Academy" (JMA). Fun + educational for young children (early elementary). Custom artwork, sounds, and Comic Kings font.
 
 ## User Personas
-1. **Students (Ages 5-8)**: Play the game, learn musical concepts through fun gameplay
-2. **Parents**: Want educational value, need to see learning outcomes
-3. **Teachers**: Use for music education, may want to customize content
+1. **Students (Ages 5-8)**: Play the game, learn music through fun
+2. **Parents**: Want educational value
+3. **Teachers**: Use for music education
 
-## Core Requirements (Static)
-- Multiple game modes (Free Play, Rhythm Game, Simon Says)
-- Custom artwork: Jelly Bells, Finn Danger (shark), Charlie the Polliwog
-- Custom audio: Bell notes (Do-Re-Mi scale), drum sounds
-- Multi-input: Keyboard (1-8), mouse, touch
-- Polyphonic playback
-- Child-friendly UI with Fredoka font
-- Educational notation display
+## What's Been Implemented (Feb 2026)
 
-## What's Been Implemented (Jan 2026)
-- ✅ Home page with 3 game mode selection
-- ✅ Free Play mode - tap/click/keyboard bells
-- ✅ Rhythm Game - Guitar Hero style with Hot Cross Buns, Mary Had a Little Lamb, Twinkle Twinkle
-- ✅ Simon Says - pattern memory game with 8 levels
-- ✅ Results/Score page with ratings
-- ✅ All custom assets integrated (bells, characters, backgrounds, audio)
-- ✅ Keyboard controls (1-8 keys)
-- ✅ Polyphonic audio support
-- ✅ Note ordering: Low (left) to High (right)
+### 5 Game Modes
+1. **Free Play** - Tap Jelly Bells, hear notes, learn Do-Re-Mi
+2. **Rhythm Game** - Guitar Hero style, 12 songs, 3 speed levels, high scores
+3. **Simon Says** - Pattern memory, 8 levels
+4. **Ear Trainer** - Hear a note, guess which bell, 4 difficulty levels
+5. **Loop Studio** - 16-step sequencer, drums + bells, 5 preset patterns, adjustable BPM
 
-## Asset Inventory
-- Characters: Finn Danger, Charlie the Polliwog, Chunk, Jazzy
-- Backgrounds: Clubhouse, Underwater, Circus, Beach, Playground, Stage
-- Instruments: Jelly Bells (8 notes), Drums (kick, snare, hi-hat, crash, ride, toms)
-- Audio: Bell notes (C-B + High C), Drum sounds, Piano sounds, Xylophone sounds
+### Song Library (12 songs, 4 categories)
+- Classic: Ode to Joy, When the Saints
+- Rock: Smoke on the Water, Seven Nation Army, Iron Man
+- Game: Super Jump Theme, Block Drop, Hero's Lullaby
+- Original: Jelly Groove, Ocean Wave, Bell Bounce, Funky Fish
 
-## Prioritized Backlog
-### P0 (Critical) - DONE
-- Multi-input controls
-- Core game modes
-- Custom asset integration
+### Features
+- Comic Kings custom font throughout
+- Keyboard (1-8), mouse, touch controls
+- Polyphonic audio (multiple notes at once)
+- Speed-based difficulty (Chill/Normal/Turbo)
+- Local high score tracking (localStorage)
+- 4 characters: Finn Danger, Charlie the Polliwog, Chunk, Jazzy
+- Custom backgrounds per mode (clubhouse, underwater, beach, playground)
+- All custom artwork & audio from user's assets
 
-### P1 (High Priority)
-- Custom song upload for Rhythm Game
-- Drums/Xylophone instrument modes
+## Backlog
+### P1
+- User's original songs (awaiting note sequences)
+- More characters from assets library
+### P2
 - Teacher mode for custom patterns
-
-### P2 (Medium Priority)
-- Progress tracking/persistence
-- Parent dashboard
-- More difficulty levels
+- Progress tracking dashboard
 - Achievements/badges
-
-### P3 (Nice to Have)
-- Multiplayer mode
-- Song editor
-- Export/share scores
-
-## Next Tasks
-1. Add user's original songs to Rhythm Game
-2. Create drums mode with drum assets
-3. Create xylophone mode
-4. Add more level backgrounds
-5. Consider teacher/admin mode
