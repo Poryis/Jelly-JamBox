@@ -312,23 +312,21 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
                 return (
                   <motion.button key={note} data-testid={`game-bell-${note}`}
                     className="relative flex flex-col items-center"
-                    onClick={() => handlePlayNote(note)}
-                    onTouchStart={(e) => { e.preventDefault(); handlePlayNote(note); }}
+                    onPointerDown={(e) => { e.preventDefault(); handlePlayNote(note); }}
                     animate={{ scale: isKeyPressed ? 0.9 : 1 }}
                     transition={{ type: 'spring', stiffness: 500 }}
                     whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.9 }}
                   >
                     <img
                       src={isKeyPressed ? bell?.image2 : bell?.image1}
                       alt={bell?.solfege}
-                      className="w-10 h-12 md:w-14 md:h-16 object-contain"
+                      className="w-14 h-16 md:w-20 md:h-24 object-contain"
                       draggable={false}
                     />
-                    <span className="text-[10px] md:text-xs font-bold" style={{ color: bell?.color }}>
+                    <span className="text-xs md:text-sm font-bold" style={{ color: bell?.color }}>
                       {bell?.solfege}
                     </span>
-                    <span className="absolute -top-1 -right-0 w-4 h-4 md:w-5 md:h-5 rounded-full bg-white border border-[var(--jma-dark)] text-[8px] md:text-[10px] font-bold flex items-center justify-center"
+                    <span className="absolute -top-1 -right-0 w-5 h-5 md:w-6 md:h-6 rounded-full bg-white border border-[var(--jma-dark)] text-[9px] md:text-xs font-bold flex items-center justify-center"
                       style={{ color: bell?.color }}>{bell?.key}</span>
                   </motion.button>
                 );
