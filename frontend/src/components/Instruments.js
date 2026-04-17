@@ -122,20 +122,20 @@ export function PianoInstrument({ onPlayNote, pressedKeys, highlightedNote }) {
 export function DrumKitVisual({ activeHits }) {
   return (
     <div className="relative mx-auto" style={{ width: '380px', height: '240px' }}>
-      {/* BACK LAYER: Crash - behind snare, left-center */}
+      {/* BACK LAYER: Crash - behind snare, left-center, BIGGER */}
       <motion.img
         src={activeHits?.has('crash') ? '/assets/drums/Crash 2.png' : '/assets/drums/Crash 1.png'}
         alt="Crash" className="absolute object-contain"
-        style={{ left: '60px', bottom: '155px', height: '90px', zIndex: 1 }}
+        style={{ left: '55px', bottom: '135px', height: '110px', zIndex: 1 }}
         animate={activeHits?.has('crash') ? { rotate: [0, -4, 0] } : {}}
         transition={{ duration: 0.12 }}
       />
 
-      {/* BACK LAYER: Ride - back right, scaled up */}
+      {/* BACK LAYER: Ride - back right, BIGGER, moved down */}
       <motion.img
         src={activeHits?.has('ride') ? '/assets/drums/Ride 2.png' : '/assets/drums/Ride 1.png'}
         alt="Ride" className="absolute object-contain"
-        style={{ left: '245px', bottom: '140px', height: '100px', zIndex: 1 }}
+        style={{ left: '240px', bottom: '120px', height: '120px', zIndex: 1 }}
         animate={activeHits?.has('ride') ? { rotate: [0, 3, 0] } : {}}
         transition={{ duration: 0.12 }}
       />
@@ -167,12 +167,12 @@ export function DrumKitVisual({ activeHits }) {
         transition={{ duration: 0.1 }}
       />
 
-      {/* Toms base T-bar - bottom of T touches top of kick, arms connect toms */}
+      {/* Toms base T-bar - SCALED DOWN */}
       <img
         src="/assets/drums/toms-base.png"
         alt="Toms base"
         className="absolute object-contain"
-        style={{ left: '150px', bottom: '95px', width: '80px', zIndex: 4 }}
+        style={{ left: '158px', bottom: '95px', width: '50px', zIndex: 4 }}
       />
 
       {/* Small tom (tom 1) - right of toms base, slightly overlapping the T arm */}
@@ -184,11 +184,11 @@ export function DrumKitVisual({ activeHits }) {
         transition={{ duration: 0.1 }}
       />
 
-      {/* FRONT LAYER: Snare - on top of everything */}
+      {/* FRONT LAYER: Snare - SCALED DOWN a bit */}
       <motion.img
         src={activeHits?.has('snare') ? '/assets/drums/Snare 2.png' : '/assets/drums/Snare 1.png'}
         alt="Snare" className="absolute object-contain"
-        style={{ left: '55px', bottom: '10px', width: '100px', zIndex: 6 }}
+        style={{ left: '60px', bottom: '10px', width: '85px', zIndex: 6 }}
         animate={activeHits?.has('snare') ? { scale: [1, 0.95, 1] } : {}}
         transition={{ duration: 0.1 }}
       />
@@ -199,7 +199,7 @@ export function DrumKitVisual({ activeHits }) {
 // Animated bells row for Loop Studio
 export function BellsVisual({ activeNotes }) {
   return (
-    <div className="flex justify-center items-end gap-1">
+    <div className="flex justify-center items-end gap-1.5">
       {BELLS.map(bell => {
         const isHit = activeNotes?.has(bell.note);
         return (
@@ -207,7 +207,8 @@ export function BellsVisual({ activeNotes }) {
             key={bell.note}
             src={isHit ? bell.image2 : bell.image1}
             alt={bell.solfege}
-            className="w-10 h-12 md:w-12 md:h-14 object-contain"
+            className="w-14 h-16 md:w-18 md:h-20 object-contain"
+            style={{ width: '72px', height: '82px' }}
             animate={isHit ? { scale: [1, 0.9, 1] } : {}}
             transition={{ duration: 0.1 }}
           />
