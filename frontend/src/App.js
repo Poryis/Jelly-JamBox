@@ -1,51 +1,85 @@
-import { useEffect } from "react";
+import { useState, useCallback } from "react";
 import "@/App.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
+import { motion, AnimatePresence } from "framer-motion";
+import HomePage from "./pages/HomePage";
+import FreePlayPage from "./pages/FreePlayPage";
+import RhythmGamePage from "./pages/RhythmGamePage";
+import SimonSaysPage from "./pages/SimonSaysPage";
+import ResultsPage from "./pages/ResultsPage";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+function App() {
+  const [score, setScore] = useState(0);
+  const [gameStats, setGameStats] = useState({
+    perfect: 0,
+    great: 0,
+    good: 0,
+    miss: 0,
+    streak: 0,
+    maxStreak: 0
+  });
 
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
-
-  useEffect(() => {
-    helloWorldApi();
+  const resetGame = useCallback(() => {
+    setScore(0);
+    setGameStats({
+      perfect: 0,
+      great: 0,
+      good: 0,
+      miss: 0,
+      streak: 0,
+      maxStreak: 0
+    });
   }, []);
 
   return (
-    <div>
-      <header className="App-header">
-        <a
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
-  );
-};
-
-function App() {
-  return (
-    <div className="App">
+    <div className="App min-h-screen">
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
-        </Routes>
+        <AnimatePresence mode="wait">
+          <Routes>
+            <Route 
+              path="/" 
+              element={<HomePage />} 
+            />
+            <Route 
+              path="/free-play" 
+              element={<FreePlayPage />} 
+            />
+            <Route 
+              path="/rhythm-game" 
+              element={
+                <RhythmGamePage 
+                  score={score}
+                  setScore={setScore}
+                  gameStats={gameStats}
+                  setGameStats={setGameStats}
+                  resetGame={resetGame}
+                />
+              } 
+            />
+            <Route 
+              path="/simon-says" 
+              element={
+                <SimonSaysPage 
+                  score={score}
+                  setScore={setScore}
+                  gameStats={gameStats}
+                  setGameStats={setGameStats}
+                  resetGame={resetGame}
+                />
+              } 
+            />
+            <Route 
+              path="/results" 
+              element={
+                <ResultsPage 
+                  score={score}
+                  gameStats={gameStats}
+                  resetGame={resetGame}
+                />
+              } 
+            />
+          </Routes>
+        </AnimatePresence>
       </BrowserRouter>
     </div>
   );
