@@ -154,7 +154,7 @@ export function TurntableVisual({ activeHits }) {
   const isScratchRight = activeHits?.has('scratchPush') || activeHits?.has('scratchPushPull');
 
   return (
-    <div className="relative mx-auto" style={{ width: '200px', height: '140px' }}>
+    <div className="relative mx-auto" style={{ width: '260px', height: '180px' }}>
       {/* Turntable base */}
       <img src="/assets/turntable/bg.png" alt="Turntable" className="absolute inset-0 w-full h-full object-contain" style={{ zIndex: 1 }} />
 
