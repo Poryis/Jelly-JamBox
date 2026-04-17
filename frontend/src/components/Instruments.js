@@ -1,8 +1,15 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { BELLS } from './JellyBells';
 
-// Xylophone
+// ============================================================================
+// IMPERATIVE IMAGE SWAP PATTERN
+// All instrument visuals use direct DOM writes to swap frames instantly.
+// Images are rendered with a constant JSX src prop so React never overrides
+// our imperative changes. No state, no transitions, no animations.
+// ============================================================================
+
+// --- XYLOPHONE ---------------------------------------------------------------
 const XYLO_BAR_CONFIG = [
   { note: 'C', height: 180, width: 54 },
   { note: 'D', height: 164, width: 52 },
@@ -14,34 +21,77 @@ const XYLO_BAR_CONFIG = [
   { note: 'High C', height: 68, width: 40 },
 ];
 
-export function XylophoneInstrument({ onPlayNote, onNoteUp, pressedKeys, highlightedNote }) {
+function XyloBar({ config, bell, onPlayNote, onNoteUp, isHighlighted, registerRef }) {
+  const barRef = useRef(null);
+
+  useEffect(() => {
+    if (registerRef) registerRef(config.note, barRef);
+    return () => { if (registerRef) registerRef(config.note, null); };
+  }, [config.note, registerRef]);
+
+  const press = useCallback((e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (barRef.current) barRef.current.style.filter = 'brightness(0.7)';
+    onPlayNote(config.note);
+  }, [config.note, onPlayNote]);
+
+  const release = useCallback(() => {
+    if (barRef.current) barRef.current.style.filter = 'brightness(1)';
+    if (onNoteUp) onNoteUp(config.note);
+  }, [config.note, onNoteUp]);
+
+  return (
+    <div data-testid={`xylo-${config.note.replace(' ', '-')}`}
+      className="flex flex-col items-center cursor-pointer select-none"
+      onPointerDown={press}
+      onPointerUp={release}
+      onPointerLeave={release}
+      onPointerCancel={release}
+      style={{ touchAction: 'none' }}>
+      <div ref={barRef} className="rounded-xl border-4 border-[var(--jma-dark)] relative"
+        style={{
+          backgroundColor: bell?.color,
+          width: `${config.width}px`,
+          height: `${config.height}px`,
+          boxShadow: isHighlighted ? `0 0 20px ${bell?.color}80, 0 4px 0 0 var(--jma-dark)` : '0 4px 0 0 var(--jma-dark)',
+        }}>
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-[var(--jma-dark)] opacity-40" />
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-[var(--jma-dark)] opacity-40" />
+        <div className="absolute top-3 left-1 w-1.5 rounded-full opacity-30 bg-white" style={{ height: `${config.height * 0.6}px` }} />
+      </div>
+      <span className="text-sm md:text-base font-bold mt-2" style={{ color: bell?.color }}>{bell?.solfege}</span>
+      <div className="w-6 h-6 rounded-full bg-white border-2 border-[var(--jma-dark)] text-xs font-bold flex items-center justify-center" style={{ color: bell?.color }}>{bell?.key}</div>
+    </div>
+  );
+}
+
+export const XylophoneInstrument = forwardRef(function XylophoneInstrument({ onPlayNote, onNoteUp, highlightedNote }, ref) {
+  const refsRef = useRef({});
+  const registerRef = useCallback((note, r) => {
+    if (r) refsRef.current[note] = r; else delete refsRef.current[note];
+  }, []);
+
+  useImperativeHandle(ref, () => ({
+    press: (note) => {
+      const r = refsRef.current[note];
+      if (r && r.current) r.current.style.filter = 'brightness(0.7)';
+    },
+    release: (note) => {
+      const r = refsRef.current[note];
+      if (r && r.current) r.current.style.filter = 'brightness(1)';
+    },
+  }));
+
   return (
     <div className="flex flex-col items-center py-4 px-2" data-testid="xylophone-row">
       <div className="flex items-end justify-center gap-2 md:gap-3">
         {XYLO_BAR_CONFIG.map((config) => {
           const bell = BELLS.find(b => b.note === config.note);
-          const isPressed = !!pressedKeys?.[config.note];
-          const isHighlighted = highlightedNote === config.note;
           return (
-            <div key={config.note} data-testid={`xylo-${config.note.replace(' ', '-')}`}
-              className="flex flex-col items-center cursor-pointer select-none"
-              onMouseDown={() => onPlayNote(config.note)}
-              onMouseUp={() => onNoteUp?.(config.note)}
-              onMouseLeave={() => onNoteUp?.(config.note)}
-              onTouchStart={(e) => { e.preventDefault(); onPlayNote(config.note); }}
-              onTouchEnd={(e) => { e.preventDefault(); onNoteUp?.(config.note); }}
-              style={{ touchAction: 'manipulation' }}>
-              <div className="rounded-xl border-4 border-[var(--jma-dark)] relative"
-                style={{ backgroundColor: isPressed ? `${bell?.color}AA` : bell?.color, width: `${config.width}px`, height: `${config.height}px`,
-                  boxShadow: isHighlighted ? `0 0 20px ${bell?.color}80, 0 4px 0 0 var(--jma-dark)` : isPressed ? '0 2px 0 0 var(--jma-dark)' : '0 4px 0 0 var(--jma-dark)',
-                  transform: isPressed ? 'translateY(2px) scale(0.95)' : 'translateY(0) scale(1)', transition: 'transform 0.05s, box-shadow 0.05s, background-color 0.05s' }}>
-                <div className="absolute top-2 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-[var(--jma-dark)] opacity-40" />
-                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-[var(--jma-dark)] opacity-40" />
-                <div className="absolute top-3 left-1 w-1.5 rounded-full opacity-30 bg-white" style={{ height: `${config.height * 0.6}px` }} />
-              </div>
-              <span className="text-sm md:text-base font-bold mt-2" style={{ color: bell?.color }}>{bell?.solfege}</span>
-              <div className="w-6 h-6 rounded-full bg-white border-2 border-[var(--jma-dark)] text-xs font-bold flex items-center justify-center" style={{ color: bell?.color }}>{bell?.key}</div>
-            </div>
+            <XyloBar key={config.note} config={config} bell={bell}
+              onPlayNote={onPlayNote} onNoteUp={onNoteUp}
+              isHighlighted={highlightedNote === config.note}
+              registerRef={registerRef} />
           );
         })}
       </div>
@@ -50,116 +100,153 @@ export function XylophoneInstrument({ onPlayNote, onNoteUp, pressedKeys, highlig
       </div>
     </div>
   );
+});
+
+// --- PIANO -------------------------------------------------------------------
+function PianoKey({ bell, onPlayNote, onNoteUp, isHighlighted, registerRef }) {
+  const keyRef = useRef(null);
+
+  useEffect(() => {
+    if (registerRef) registerRef(bell.note, keyRef);
+    return () => { if (registerRef) registerRef(bell.note, null); };
+  }, [bell.note, registerRef]);
+
+  const press = useCallback((e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (keyRef.current) keyRef.current.style.filter = 'brightness(0.75)';
+    onPlayNote(bell.note);
+  }, [bell.note, onPlayNote]);
+
+  const release = useCallback(() => {
+    if (keyRef.current) keyRef.current.style.filter = 'brightness(1)';
+    if (onNoteUp) onNoteUp(bell.note);
+  }, [bell.note, onNoteUp]);
+
+  return (
+    <div data-testid={`piano-${bell.note.replace(' ', '-')}`}
+      className="flex flex-col items-center cursor-pointer select-none"
+      onPointerDown={press}
+      onPointerUp={release}
+      onPointerLeave={release}
+      onPointerCancel={release}
+      style={{ touchAction: 'none' }}>
+      <div ref={keyRef} className="rounded-t-xl border-4 border-[var(--jma-dark)] flex flex-col items-center justify-end pb-3 relative"
+        style={{
+          backgroundColor: bell.color,
+          width: '56px', height: '150px',
+          boxShadow: isHighlighted ? `0 0 20px ${bell.color}80, 0 6px 0 0 var(--jma-dark)` : '0 6px 0 0 var(--jma-dark)',
+          marginLeft: '-2px',
+        }}>
+        <div className="absolute top-3 left-1.5 w-2 rounded-full opacity-30 bg-white" style={{ height: '60%' }} />
+        <div className="bg-white/90 rounded-lg px-2 py-1 border-2 border-[var(--jma-dark)]">
+          <span className="text-sm font-black" style={{ color: 'var(--jma-dark)' }}>{bell.solfege}</span>
+        </div>
+      </div>
+      <div className="w-6 h-6 rounded-full bg-white border-2 border-[var(--jma-dark)] text-xs font-bold flex items-center justify-center mt-1" style={{ color: bell.color }}>{bell.key}</div>
+    </div>
+  );
 }
 
-export function PianoInstrument({ onPlayNote, onNoteUp, pressedKeys, highlightedNote }) {
+export const PianoInstrument = forwardRef(function PianoInstrument({ onPlayNote, onNoteUp, highlightedNote }, ref) {
+  const refsRef = useRef({});
+  const registerRef = useCallback((note, r) => {
+    if (r) refsRef.current[note] = r; else delete refsRef.current[note];
+  }, []);
+
+  useImperativeHandle(ref, () => ({
+    press: (note) => {
+      const r = refsRef.current[note];
+      if (r && r.current) r.current.style.filter = 'brightness(0.75)';
+    },
+    release: (note) => {
+      const r = refsRef.current[note];
+      if (r && r.current) r.current.style.filter = 'brightness(1)';
+    },
+  }));
+
   return (
     <div className="flex items-end justify-center gap-0.5 py-4 px-2" data-testid="piano-row">
-      {BELLS.map((bell) => {
-        const isPressed = !!pressedKeys?.[bell.note];
-        const isHighlighted = highlightedNote === bell.note;
-        return (
-          <div key={bell.note} data-testid={`piano-${bell.note.replace(' ', '-')}`}
-            className="flex flex-col items-center cursor-pointer select-none"
-            onMouseDown={() => onPlayNote(bell.note)}
-            onMouseUp={() => onNoteUp?.(bell.note)}
-            onMouseLeave={() => onNoteUp?.(bell.note)}
-            onTouchStart={(e) => { e.preventDefault(); onPlayNote(bell.note); }}
-            onTouchEnd={(e) => { e.preventDefault(); onNoteUp?.(bell.note); }}
-            style={{ touchAction: 'manipulation' }}>
-            <div className="rounded-t-xl border-4 border-[var(--jma-dark)] flex flex-col items-center justify-end pb-3 relative"
-              style={{ backgroundColor: isPressed ? `${bell.color}AA` : bell.color, width: '56px', height: '150px',
-                boxShadow: isHighlighted ? `0 0 20px ${bell.color}80, 0 6px 0 0 var(--jma-dark)` : isPressed ? '0 3px 0 0 var(--jma-dark)' : '0 6px 0 0 var(--jma-dark)',
-                marginLeft: '-2px', transform: isPressed ? 'translateY(3px)' : 'translateY(0)', transition: 'transform 0.05s, box-shadow 0.05s, background-color 0.05s' }}>
-              <div className="absolute top-3 left-1.5 w-2 rounded-full opacity-30 bg-white" style={{ height: '60%' }} />
-              <div className="bg-white/90 rounded-lg px-2 py-1 border-2 border-[var(--jma-dark)]">
-                <span className="text-sm font-black" style={{ color: 'var(--jma-dark)' }}>{bell.solfege}</span>
-              </div>
-            </div>
-            <div className="w-6 h-6 rounded-full bg-white border-2 border-[var(--jma-dark)] text-xs font-bold flex items-center justify-center mt-1" style={{ color: bell.color }}>{bell.key}</div>
-          </div>
-        );
-      })}
+      {BELLS.map((bell) => (
+        <PianoKey key={bell.note} bell={bell}
+          onPlayNote={onPlayNote} onNoteUp={onNoteUp}
+          isHighlighted={highlightedNote === bell.note}
+          registerRef={registerRef} />
+      ))}
     </div>
   );
-}
+});
 
-// Drum kit - refined positioning
-export function DrumKitVisual({ activeHits }) {
+// --- DRUM KIT (used by Loop Studio as visual-only display) -------------------
+// Exposes imperative .flash(id) that swaps img1->img2 for ~100ms then back.
+const DRUM_FRAMES = {
+  crash:  { img1: '/assets/drums/Crash 1.png',  img2: '/assets/drums/Crash 2.png',  style: { left: '55px',  bottom: '125px', height: '110px', zIndex: 1 } },
+  ride:   { img1: '/assets/drums/Ride 1.png',   img2: '/assets/drums/Ride 2.png',   style: { left: '245px', bottom: '95px',  height: '140px', zIndex: 1 } },
+  hihat:  { img1: '/assets/drums/Hi hat 1.png', img2: '/assets/drums/Hi hat 2.png', style: { left: '0px',   bottom: '20px',  height: '160px', zIndex: 3 } },
+  kick:   { img1: '/assets/drums/kICK 1.png',   img2: '/assets/drums/kICK 2.png',   style: { left: '120px', bottom: '0px',   width:  '140px', zIndex: 3 } },
+  lowTom: { img1: '/assets/drums/tOM 2 1.png',  img2: '/assets/drums/tOM 2 2.png',  style: { left: '115px', bottom: '128px', width:  '70px',  zIndex: 3 } },
+  tom:    { img1: '/assets/drums/tOM 1 1.png',  img2: '/assets/drums/tOM 1 2.png',  style: { left: '200px', bottom: '130px', width:  '60px',  zIndex: 5 } },
+  snare:  { img1: '/assets/drums/Snare 1.png',  img2: '/assets/drums/Snare 2.png',  style: { left: '60px',  bottom: '10px',  width:  '85px',  zIndex: 6 } },
+};
+
+export const DrumKitVisual = forwardRef(function DrumKitVisual(_props, ref) {
+  const refsRef = useRef({});
+  const timersRef = useRef({});
+
+  useImperativeHandle(ref, () => ({
+    flash: (id, ms = 100) => {
+      const frame = DRUM_FRAMES[id];
+      const imgRef = refsRef.current[id];
+      if (!frame || !imgRef || !imgRef.current) return;
+      imgRef.current.src = frame.img2;
+      clearTimeout(timersRef.current[id]);
+      timersRef.current[id] = setTimeout(() => {
+        if (imgRef.current) imgRef.current.src = frame.img1;
+      }, ms);
+    },
+  }));
+
+  useEffect(() => {
+    const timers = timersRef.current;
+    return () => Object.values(timers).forEach(t => clearTimeout(t));
+  }, []);
+
+  const setRef = (id) => (el) => {
+    if (el) {
+      if (!refsRef.current[id]) refsRef.current[id] = { current: null };
+      refsRef.current[id].current = el;
+    }
+  };
+
   return (
     <div className="relative mx-auto" style={{ width: '380px', height: '240px' }}>
-      {/* BACK: Crash */}
-      <motion.img src={activeHits?.has('crash') ? '/assets/drums/Crash 2.png' : '/assets/drums/Crash 1.png'}
-        alt="Crash" className="absolute object-contain"
-        style={{ left: '55px', bottom: '125px', height: '110px', zIndex: 1 }}
-        animate={activeHits?.has('crash') ? { rotate: [0, -4, 0] } : {}} transition={{ duration: 0.12 }} />
-
-      {/* BACK: Ride - scaled up, moved down and slightly right */}
-      <motion.img src={activeHits?.has('ride') ? '/assets/drums/Ride 2.png' : '/assets/drums/Ride 1.png'}
-        alt="Ride" className="absolute object-contain"
-        style={{ left: '245px', bottom: '95px', height: '140px', zIndex: 1 }}
-        animate={activeHits?.has('ride') ? { rotate: [0, 3, 0] } : {}} transition={{ duration: 0.12 }} />
-
-      {/* Hi-Hat */}
-      <motion.img src={activeHits?.has('hihat') ? '/assets/drums/Hi hat 2.png' : '/assets/drums/Hi hat 1.png'}
-        alt="Hi-Hat" className="absolute object-contain"
-        style={{ left: '0px', bottom: '20px', height: '160px', zIndex: 3 }}
-        animate={activeHits?.has('hihat') ? { y: [0, 3, 0] } : {}} transition={{ duration: 0.1 }} />
-
-      {/* Kick - center, pulses on hit */}
-      <motion.img
-        src="/assets/drums/kICK 1.png"
-        alt="Kick" className="absolute object-contain"
-        style={{ left: '120px', bottom: '0px', width: '140px', zIndex: 3 }}
-        animate={activeHits?.has('kick') ? { scale: [1, 0.94, 1] } : { scale: 1 }}
-        transition={{ duration: 0.12 }}
-      />
-
-      {/* Big tom (tom 2) - moved UP and RIGHT with the group */}
-      <motion.img src={activeHits?.has('lowTom') ? '/assets/drums/tOM 2 2.png' : '/assets/drums/tOM 2 1.png'}
-        alt="Tom 2" className="absolute object-contain"
-        style={{ left: '115px', bottom: '128px', width: '70px', zIndex: 3 }}
-        animate={activeHits?.has('lowTom') ? { scale: [1, 0.95, 1] } : {}} transition={{ duration: 0.1 }} />
-
-      {/* Toms base T-bar - moved UP and RIGHT with the group */}
+      {Object.entries(DRUM_FRAMES).map(([id, frame]) => (
+        <img key={id} ref={setRef(id)}
+          src={frame.img1} alt={id}
+          className="absolute object-contain"
+          style={frame.style}
+          draggable={false} />
+      ))}
+      {/* Toms base - static decoration */}
       <img src="/assets/drums/toms-base.png" alt="Toms base" className="absolute object-contain"
         style={{ left: '172px', bottom: '118px', width: '38px', zIndex: 4 }} />
-
-      {/* Small tom (tom 1) - moved UP and RIGHT with the group */}
-      <motion.img src={activeHits?.has('tom') ? '/assets/drums/tOM 1 2.png' : '/assets/drums/tOM 1 1.png'}
-        alt="Tom 1" className="absolute object-contain"
-        style={{ left: '200px', bottom: '130px', width: '60px', zIndex: 5 }}
-        animate={activeHits?.has('tom') ? { scale: [1, 0.95, 1] } : {}} transition={{ duration: 0.1 }} />
-
-      {/* FRONT: Snare */}
-      <motion.img src={activeHits?.has('snare') ? '/assets/drums/Snare 2.png' : '/assets/drums/Snare 1.png'}
-        alt="Snare" className="absolute object-contain"
-        style={{ left: '60px', bottom: '10px', width: '85px', zIndex: 6 }}
-        animate={activeHits?.has('snare') ? { scale: [1, 0.95, 1] } : {}} transition={{ duration: 0.1 }} />
     </div>
   );
-}
+});
 
-// Turntable visual - base with two spinning records
-// Records spin continuously, stop briefly on scratch triggers
+// --- TURNTABLE (records spin continuously; keep spin animation - part of identity)
 export function TurntableVisual({ activeHits }) {
   const isScratchLeft = activeHits?.has('scratchPull') || activeHits?.has('scratchPushPull');
   const isScratchRight = activeHits?.has('scratchPush') || activeHits?.has('scratchPushPull');
 
   return (
     <div className="relative mx-auto" style={{ width: '260px', height: '180px' }}>
-      {/* Turntable base */}
       <img src="/assets/turntable/bg.png" alt="Turntable" className="absolute inset-0 w-full h-full object-contain" style={{ zIndex: 1 }} />
-
-      {/* Left record - spins unless scratch */}
       <motion.img src="/assets/turntable/record-left.png" alt="Record L"
         className="absolute object-contain"
         style={{ left: '10%', top: '22%', width: '34%', zIndex: 2 }}
         animate={isScratchLeft ? { rotate: 0 } : { rotate: 360 }}
         transition={isScratchLeft ? { duration: 0.1 } : { repeat: Infinity, duration: 2, ease: 'linear' }}
       />
-
-      {/* Right record - spins unless scratch */}
       <motion.img src="/assets/turntable/record-right.png" alt="Record R"
         className="absolute object-contain"
         style={{ right: '10%', top: '22%', width: '34%', zIndex: 2 }}
@@ -170,26 +257,50 @@ export function TurntableVisual({ activeHits }) {
   );
 }
 
-// Bells visual for Loop Studio - 2x bigger, at the very bottom
-export function BellsVisual({ activeNotes }) {
+// --- BELLS VISUAL (used by Loop Studio) --------------------------------------
+export const BellsVisual = forwardRef(function BellsVisual(_props, ref) {
+  const refsRef = useRef({});
+  const timersRef = useRef({});
+
+  useImperativeHandle(ref, () => ({
+    flash: (note, ms = 100) => {
+      const bell = BELLS.find(b => b.note === note);
+      const imgRef = refsRef.current[note];
+      if (!bell || !imgRef || !imgRef.current) return;
+      imgRef.current.src = bell.image2;
+      clearTimeout(timersRef.current[note]);
+      timersRef.current[note] = setTimeout(() => {
+        if (imgRef.current) imgRef.current.src = bell.image1;
+      }, ms);
+    },
+  }));
+
+  useEffect(() => {
+    const timers = timersRef.current;
+    return () => Object.values(timers).forEach(t => clearTimeout(t));
+  }, []);
+
+  const setRef = (note) => (el) => {
+    if (el) {
+      if (!refsRef.current[note]) refsRef.current[note] = { current: null };
+      refsRef.current[note].current = el;
+    }
+  };
+
   return (
     <div className="relative inline-block">
       <div className="absolute inset-0 -inset-x-2 -inset-y-1 bg-white/40 rounded-xl backdrop-blur-sm" />
       <div className="flex justify-center items-end gap-0 relative z-10 px-1 py-1">
-        {BELLS.map(bell => {
-          const isHit = activeNotes?.has(bell.note);
-          return (
-            <motion.img key={bell.note}
-              src={isHit ? bell.image2 : bell.image1}
-              alt={bell.solfege}
-              className="object-contain"
-              style={{ width: '100px', height: '115px', margin: '0 -4px' }}
-              animate={isHit ? { scale: [1, 0.88, 1] } : {}}
-              transition={{ duration: 0.1 }}
-            />
-          );
-        })}
+        {BELLS.map(bell => (
+          <img key={bell.note} ref={setRef(bell.note)}
+            src={bell.image1}
+            alt={bell.solfege}
+            className="object-contain"
+            style={{ width: '100px', height: '115px', margin: '0 -4px' }}
+            draggable={false}
+          />
+        ))}
       </div>
     </div>
   );
-}
+});

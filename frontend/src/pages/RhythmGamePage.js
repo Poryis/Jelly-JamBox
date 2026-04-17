@@ -53,13 +53,15 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
   const [fallingNotes, setFallingNotes] = useState([]);
   const [currentNoteIndex, setCurrentNoteIndex] = useState(0);
   const [feedback, setFeedback] = useState(null);
-  const [pressedKeys, setPressedKeys] = useState(new Set());
   const [isNewRecord, setIsNewRecord] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('All');
 
   const gameLoopRef = useRef(null);
   const noteIdRef = useRef(0);
   const fallingNotesRef = useRef([]);
+  // Imperative refs for instant bell frame swap (no React render involved)
+  const bellImgRefs = useRef({});
+  const pressedKeysRef = useRef(new Set()); // dedup keyboard repeats
 
   const speedConfig = SPEED_SETTINGS[speed];
   const songCategories = useMemo(() => getSongsByCategory(), []);
@@ -104,25 +106,32 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
     setTimeout(() => setFeedback(null), 400);
   }, [playBellNote, playFeedbackSound, setScore, setGameStats]);
 
-  // Keyboard controls
+  // Keyboard controls - imperative image swap via ref (no React render)
   useEffect(() => {
     if (gameState !== 'playing') return;
     const handleKeyDown = (e) => {
       const note = KEY_TO_NOTE[e.key];
-      if (note && activeBells.includes(note) && !pressedKeys.has(e.key)) {
-        setPressedKeys(prev => new Set([...prev, e.key]));
+      if (note && activeBells.includes(note) && !pressedKeysRef.current.has(e.key)) {
+        pressedKeysRef.current.add(e.key);
+        const bell = BELLS.find(b => b.note === note);
+        const img = bellImgRefs.current[note];
+        if (img && img.current && bell) img.current.src = bell.image2;
         handlePlayNote(note);
       }
     };
     const handleKeyUp = (e) => {
-      if (KEY_TO_NOTE[e.key]) {
-        setPressedKeys(prev => { const s = new Set(prev); s.delete(e.key); return s; });
+      const note = KEY_TO_NOTE[e.key];
+      if (note) {
+        pressedKeysRef.current.delete(e.key);
+        const bell = BELLS.find(b => b.note === note);
+        const img = bellImgRefs.current[note];
+        if (img && img.current && bell) img.current.src = bell.image1;
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
     return () => { window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('keyup', handleKeyUp); };
-  }, [gameState, activeBells, handlePlayNote, pressedKeys]);
+  }, [gameState, activeBells, handlePlayNote]);
 
   // Spawn notes
   useEffect(() => {
@@ -306,35 +315,46 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
             </AnimatePresence>
           </div>
 
-          {/* Bell images at bottom - press/release swap states */}
+          {/* Bell images at bottom - imperative press/release swap states (no React state) */}
           <div className="absolute bottom-0 left-0 right-0 bg-white/95 border-t-4 border-[var(--jma-dark)] p-2">
             <div className="flex justify-center gap-1 md:gap-2">
               {activeBells.map(note => {
                 const bell = BELLS.find(b => b.note === note);
-                const isKeyPressed = pressedKeys.has(bell?.key);
+                // Initialize ref holder for this bell if not present
+                if (!bellImgRefs.current[note]) bellImgRefs.current[note] = { current: null };
+                const setImgRef = (el) => { bellImgRefs.current[note].current = el; };
+                const doDown = (e) => {
+                  e.preventDefault();
+                  if (bellImgRefs.current[note]?.current && bell) bellImgRefs.current[note].current.src = bell.image2;
+                  handlePlayNote(note);
+                };
+                const doUp = (e) => {
+                  if (e) e.preventDefault();
+                  if (bellImgRefs.current[note]?.current && bell) bellImgRefs.current[note].current.src = bell.image1;
+                };
                 return (
-                  <motion.button key={note} data-testid={`game-bell-${note}`}
-                    className="relative flex flex-col items-center"
-                    onPointerDown={(e) => { e.preventDefault(); setPressedKeys(prev => new Set([...prev, bell?.key])); handlePlayNote(note); }}
-                    onPointerUp={(e) => { e.preventDefault(); setPressedKeys(prev => { const s = new Set(prev); s.delete(bell?.key); return s; }); }}
-                    onPointerLeave={() => { setPressedKeys(prev => { const s = new Set(prev); s.delete(bell?.key); return s; }); }}
-                    animate={{ scale: isKeyPressed ? 0.9 : 1 }}
-                    transition={{ type: 'spring', stiffness: 500 }}
-                    whileHover={{ scale: 1.05 }}
-                    style={{ touchAction: 'manipulation' }}
+                  <button key={note} data-testid={`game-bell-${note}`}
+                    type="button"
+                    className="relative flex flex-col items-center bg-transparent border-0 p-0"
+                    onPointerDown={doDown}
+                    onPointerUp={doUp}
+                    onPointerLeave={doUp}
+                    onPointerCancel={doUp}
+                    style={{ touchAction: 'none' }}
                   >
                     <img
-                      src={isKeyPressed ? bell?.image2 : bell?.image1}
+                      ref={setImgRef}
+                      src={bell?.image1}
                       alt={bell?.solfege}
-                      className="w-14 h-16 md:w-20 md:h-24 object-contain"
+                      className="w-14 h-16 md:w-20 md:h-24 object-contain pointer-events-none"
                       draggable={false}
                     />
-                    <span className="text-xs md:text-sm font-bold" style={{ color: bell?.color }}>
+                    <span className="text-xs md:text-sm font-bold pointer-events-none" style={{ color: bell?.color }}>
                       {bell?.solfege}
                     </span>
-                    <span className="absolute -top-1 -right-0 w-5 h-5 md:w-6 md:h-6 rounded-full bg-white border border-[var(--jma-dark)] text-[9px] md:text-xs font-bold flex items-center justify-center"
+                    <span className="absolute -top-1 -right-0 w-5 h-5 md:w-6 md:h-6 rounded-full bg-white border border-[var(--jma-dark)] text-[9px] md:text-xs font-bold flex items-center justify-center pointer-events-none"
                       style={{ color: bell?.color }}>{bell?.key}</span>
-                  </motion.button>
+                  </button>
                 );
               })}
             </div>

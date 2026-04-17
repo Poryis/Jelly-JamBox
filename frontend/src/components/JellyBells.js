@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
 
 export const BELLS = [
   { note: 'C', solfege: 'Do', color: '#FF3B30', image1: '/assets/bells/C 1.png', image2: '/assets/bells/C 2.png', key: '1' },
@@ -17,36 +16,39 @@ const KEY_TO_NOTE = {
   '5': 'G', '6': 'A', '7': 'B', '8': 'High C'
 };
 
-// Direct DOM image swap - no React state, instant visual feedback
-function BellItem({ bell, onPlayNote, onNoteUp, highlightedNote, showNotation }) {
+// IMPORTANT: All visual swaps use imperative DOM writes (imgRef.current.src = ...).
+// Image JSX src prop is CONSTANT (bell.image1) so React never overrides our imperative changes.
+// No state, no transitions, no animations - instant frame swap.
+function BellItem({ bell, onPlayNote, onNoteUp, highlightedNote, showNotation, registerRef }) {
   const imgRef = useRef(null);
-  const wrapRef = useRef(null);
 
-  const pressDown = useCallback(() => {
+  useEffect(() => {
+    if (registerRef) registerRef(bell.note, imgRef);
+    return () => { if (registerRef) registerRef(bell.note, null); };
+  }, [bell.note, registerRef]);
+
+  const pressDown = useCallback((e) => {
+    if (e && e.preventDefault) e.preventDefault();
     if (imgRef.current) imgRef.current.src = bell.image2;
-    if (wrapRef.current) wrapRef.current.style.transform = 'scale(0.9)';
     onPlayNote(bell.note);
   }, [bell, onPlayNote]);
 
   const pressUp = useCallback(() => {
     if (imgRef.current) imgRef.current.src = bell.image1;
-    if (wrapRef.current) wrapRef.current.style.transform = 'scale(1)';
     if (onNoteUp) onNoteUp(bell.note);
   }, [bell, onNoteUp]);
 
   return (
     <div className="bell-container flex flex-col items-center">
       <div
-        ref={wrapRef}
         data-testid={`bell-${bell.note.replace(' ', '-')}`}
         data-note={bell.note}
         className={`bell-instrument relative cursor-pointer select-none ${highlightedNote === bell.note ? 'bell-highlight' : ''}`}
-        onMouseDown={pressDown}
-        onMouseUp={pressUp}
-        onMouseLeave={pressUp}
-        onTouchStart={(e) => { e.preventDefault(); pressDown(); }}
-        onTouchEnd={(e) => { e.preventDefault(); pressUp(); }}
-        style={{ touchAction: 'manipulation', transition: 'transform 0.05s' }}
+        onPointerDown={pressDown}
+        onPointerUp={pressUp}
+        onPointerLeave={pressUp}
+        onPointerCancel={pressUp}
+        style={{ touchAction: 'none' }}
       >
         <img
           ref={imgRef}
@@ -57,13 +59,6 @@ function BellItem({ bell, onPlayNote, onNoteUp, highlightedNote, showNotation })
         />
         <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-white border-2 border-[var(--jma-dark)] flex items-center justify-center text-xs font-bold pointer-events-none"
           style={{ color: bell.color }}>{bell.key}</div>
-        <AnimatePresence>
-          {highlightedNote === bell.note && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0 rounded-full pointer-events-none"
-              style={{ background: `radial-gradient(circle, ${bell.color}80 0%, transparent 70%)`, zIndex: -1 }} />
-          )}
-        </AnimatePresence>
       </div>
       <div className="bell-note-label text-center">
         <span style={{ color: bell.color }}>{bell.solfege}</span>
@@ -74,35 +69,33 @@ function BellItem({ bell, onPlayNote, onNoteUp, highlightedNote, showNotation })
 }
 
 function JellyBellsRow({ onPlayNote, onNoteUp, highlightedNote, showNotation = true, enableKeyboard = true }) {
-  // Direct DOM refs for keyboard-driven swaps
-  const containerRef = useRef(null);
+  // Parent-held map of img refs by note for keyboard-triggered swaps
+  const refsRef = useRef({});
+
+  const registerRef = useCallback((note, ref) => {
+    if (ref) refsRef.current[note] = ref;
+    else delete refsRef.current[note];
+  }, []);
 
   useEffect(() => {
     if (!enableKeyboard) return;
+    const pressedKeys = new Set();
     const onKeyDown = (e) => {
       const note = KEY_TO_NOTE[e.key];
-      if (!note) return;
+      if (!note || pressedKeys.has(note)) return;
+      pressedKeys.add(note);
       const bell = BELLS.find(b => b.note === note);
-      if (!bell || !containerRef.current) return;
-      const el = containerRef.current.querySelector(`[data-note="${note}"]`);
-      if (!el) return;
-      const img = el.querySelector('img');
-      if (img && img.src.indexOf(encodeURIComponent(bell.image2.split('/').pop())) === -1) {
-        img.src = bell.image2;
-        el.style.transform = 'scale(0.9)';
-        onPlayNote(note);
-      }
+      const imgRef = refsRef.current[note];
+      if (imgRef && imgRef.current && bell) imgRef.current.src = bell.image2;
+      onPlayNote(note);
     };
     const onKeyUp = (e) => {
       const note = KEY_TO_NOTE[e.key];
       if (!note) return;
+      pressedKeys.delete(note);
       const bell = BELLS.find(b => b.note === note);
-      if (!bell || !containerRef.current) return;
-      const el = containerRef.current.querySelector(`[data-note="${note}"]`);
-      if (!el) return;
-      const img = el.querySelector('img');
-      if (img) img.src = bell.image1;
-      el.style.transform = 'scale(1)';
+      const imgRef = refsRef.current[note];
+      if (imgRef && imgRef.current && bell) imgRef.current.src = bell.image1;
       if (onNoteUp) onNoteUp(note);
     };
     window.addEventListener('keydown', onKeyDown);
@@ -111,7 +104,7 @@ function JellyBellsRow({ onPlayNote, onNoteUp, highlightedNote, showNotation = t
   }, [enableKeyboard, onPlayNote, onNoteUp]);
 
   return (
-    <div ref={containerRef} className="bell-row" data-testid="jelly-bells-row">
+    <div className="bell-row" data-testid="jelly-bells-row">
       {BELLS.map((bell) => (
         <BellItem
           key={bell.note}
@@ -120,6 +113,7 @@ function JellyBellsRow({ onPlayNote, onNoteUp, highlightedNote, showNotation = t
           onNoteUp={onNoteUp}
           highlightedNote={highlightedNote}
           showNotation={showNotation}
+          registerRef={registerRef}
         />
       ))}
     </div>

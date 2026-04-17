@@ -119,13 +119,16 @@ function LoopStudioPage() {
   const [activeTracks, setActiveTracks] = useState(['drum_kick', 'drum_snare', 'drum_hihat', 'bells_C', 'bells_E', 'bells_G']);
   const [grid, setGrid] = useState({});
   const [mutedTracks, setMutedTracks] = useState(new Set());
+  // For turntable scratch visual (kept as state since spin animation needs it)
   const [activeHits, setActiveHits] = useState(new Set());
-  const [activeBellNotes, setActiveBellNotes] = useState(new Set());
 
   const intervalRef = useRef(null);
   const gridRef = useRef(grid);
   const mutedRef = useRef(mutedTracks);
   const totalStepsRef = useRef(totalSteps);
+  // Imperative handles for drum kit and bells visuals (instant frame swap, no state)
+  const drumKitRef = useRef(null);
+  const bellsVisualRef = useRef(null);
 
   useEffect(() => { gridRef.current = grid; }, [grid]);
   useEffect(() => { mutedRef.current = mutedTracks; }, [mutedTracks]);
@@ -175,25 +178,29 @@ function LoopStudioPage() {
   const playStep = useCallback((step) => {
     const currentGrid = gridRef.current;
     const muted = mutedRef.current;
-    const hits = new Set();
-    const bellHits = new Set();
+    const scratchHits = new Set();
     Object.entries(currentGrid).forEach(([trackId, steps]) => {
       if (muted.has(trackId)) return;
       if (steps[step]) {
         const preset = TRACK_PRESETS.find(p => p.id === trackId);
         if (preset?.type === 'bell') {
           playBellNote(preset.note);
-          bellHits.add(preset.note);
+          // Imperative flash - bypasses React state entirely for instant frame swap
+          if (bellsVisualRef.current) bellsVisualRef.current.flash(preset.note);
         }
-        else if (preset?.type === 'drum' || preset?.type === 'scratch') {
+        else if (preset?.type === 'drum') {
           playDrumSound(preset.note);
-          hits.add(preset.note);
+          if (drumKitRef.current) drumKitRef.current.flash(preset.note);
+        }
+        else if (preset?.type === 'scratch') {
+          playDrumSound(preset.note);
+          scratchHits.add(preset.note);
         }
       }
     });
-    setActiveHits(hits);
-    setActiveBellNotes(bellHits);
-    setTimeout(() => { setActiveHits(new Set()); setActiveBellNotes(new Set()); }, 100);
+    // Scratch hits still use state because the turntable records animate continuously
+    setActiveHits(scratchHits);
+    setTimeout(() => { setActiveHits(new Set()); }, 100);
   }, [playBellNote, playDrumSound]);
 
   const togglePlay = useCallback(() => {
@@ -458,7 +465,7 @@ function LoopStudioPage() {
         <div className="max-w-5xl mx-auto mt-3 flex items-end justify-between px-12">
           {/* Drum kit */}
           <div className="flex-shrink-0">
-            <DrumKitVisual activeHits={activeHits} />
+            <DrumKitVisual ref={drumKitRef} />
           </div>
           {/* Turntable */}
           <div className="flex-shrink-0">
@@ -467,7 +474,7 @@ function LoopStudioPage() {
         </div>
         {/* Bells fixed to bottom of page, centered */}
         <div className="fixed bottom-2 left-1/2 -translate-x-1/2 z-20">
-          <BellsVisual activeNotes={activeBellNotes} />
+          <BellsVisual ref={bellsVisualRef} />
         </div>
       </main>
       <PageCharacters page="loop-studio" />

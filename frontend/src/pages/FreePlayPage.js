@@ -27,13 +27,13 @@ const PIANO_AUDIO = { C: '/assets/audio/C4.mp3', D: '/assets/audio/D4.mp3', E: '
 const DRUM_KEY_MAP = { q: 'hihat', w: 'crash', e: 'ride', a: 'snare', s: 'tom', d: 'lowTom', x: 'kick' };
 
 const DRUM_INFO = {
-  hihat: { label: 'Hi-Hat', key: 'Q', color: '#F1C40F', img1: '/assets/drums/Hi hat 1.png', img2: '/assets/drums/Hi hat 2.png' },
-  crash: { label: 'Crash', key: 'W', color: '#E67E22', img1: '/assets/drums/Crash 1.png', img2: '/assets/drums/Crash 2.png' },
-  ride: { label: 'Ride', key: 'E', color: '#E74C3C', img1: '/assets/drums/Ride 1.png', img2: '/assets/drums/Ride 2.png' },
-  snare: { label: 'Snare', key: 'A', color: '#3498DB', img1: '/assets/drums/Snare 1.png', img2: '/assets/drums/Snare 2.png' },
-  tom: { label: 'Tom 1', key: 'S', color: '#9B59B6', img1: '/assets/drums/tOM 1 1.png', img2: '/assets/drums/tOM 1 2.png' },
-  lowTom: { label: 'Tom 2', key: 'D', color: '#1ABC9C', img1: '/assets/drums/tOM 2 1.png', img2: '/assets/drums/tOM 2 2.png' },
-  kick: { label: 'Kick', key: 'X', color: '#E74C3C', img1: '/assets/drums/kICK 1.png', img2: '/assets/drums/kICK 1.png' },
+  hihat:  { label: 'Hi-Hat', key: 'Q', color: '#F1C40F', img1: '/assets/drums/Hi hat 1.png', img2: '/assets/drums/Hi hat 2.png' },
+  crash:  { label: 'Crash',  key: 'W', color: '#E67E22', img1: '/assets/drums/Crash 1.png',  img2: '/assets/drums/Crash 2.png'  },
+  ride:   { label: 'Ride',   key: 'E', color: '#E74C3C', img1: '/assets/drums/Ride 1.png',   img2: '/assets/drums/Ride 2.png'   },
+  snare:  { label: 'Snare',  key: 'A', color: '#3498DB', img1: '/assets/drums/Snare 1.png',  img2: '/assets/drums/Snare 2.png'  },
+  tom:    { label: 'Tom 1',  key: 'S', color: '#9B59B6', img1: '/assets/drums/tOM 1 1.png',  img2: '/assets/drums/tOM 1 2.png'  },
+  lowTom: { label: 'Tom 2',  key: 'D', color: '#1ABC9C', img1: '/assets/drums/tOM 2 1.png',  img2: '/assets/drums/tOM 2 2.png'  },
+  kick:   { label: 'Kick',   key: 'X', color: '#E74C3C', img1: '/assets/drums/kICK 1.png',   img2: '/assets/drums/kICK 2.png'   },
 };
 
 const noteToSolfege = { C: 'Do', D: 'Re', E: 'Mi', F: 'Fa', G: 'So', A: 'La', B: 'Ti', 'High C': 'Do' };
@@ -82,31 +82,43 @@ function CharacterReaction({ streak }) {
   );
 }
 
-// Simple press tracker - plain object, guaranteed re-render
-function usePressState() {
-  const [pressed, setPressed] = useState({});
-  const press = useCallback((id) => setPressed(prev => ({ ...prev, [id]: true })), []);
-  const release = useCallback((id) => setPressed(prev => ({ ...prev, [id]: false })), []);
-  const isPressed = useCallback((id) => !!pressed[id], [pressed]);
-  return { pressed, press, release, isPressed };
-}
+// ============================================================================
+// PlayableBell: pure imperative DOM manipulation. The <img> src JSX prop is
+// CONSTANT (bell.image1) so React never overrides our imperative changes.
+// Swap happens synchronously in the event handler BEFORE any setState calls.
+// ============================================================================
+function PlayableBell({ bell, onDown, onUp, isHighlighted, registerRef }) {
+  const imgRef = useRef(null);
 
-// Individual bell with direct mousedown/mouseup
-function PlayableBell({ bell, isDown, onDown, onUp, isHighlighted }) {
+  useEffect(() => {
+    if (registerRef) registerRef(bell.note, imgRef);
+    return () => { if (registerRef) registerRef(bell.note, null); };
+  }, [bell.note, registerRef]);
+
+  const doDown = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (imgRef.current) imgRef.current.src = bell.image2; // INSTANT frame swap
+    onDown(bell.note);
+  };
+  const doUp = () => {
+    if (imgRef.current) imgRef.current.src = bell.image1;
+    onUp(bell.note);
+  };
+
   return (
     <div className="bell-container flex flex-col items-center">
       <div
         data-testid={`bell-${bell.note.replace(' ', '-')}`}
         className={`bell-instrument relative cursor-pointer select-none ${isHighlighted ? 'bell-highlight' : ''}`}
-        onMouseDown={() => onDown(bell.note)}
-        onMouseUp={() => onUp(bell.note)}
-        onMouseLeave={() => onUp(bell.note)}
-        onTouchStart={(e) => { e.preventDefault(); onDown(bell.note); }}
-        onTouchEnd={(e) => { e.preventDefault(); onUp(bell.note); }}
-        style={{ touchAction: 'manipulation', transform: isDown ? 'scale(0.9)' : 'scale(1)', transition: 'transform 0.05s' }}
+        onPointerDown={doDown}
+        onPointerUp={doUp}
+        onPointerLeave={doUp}
+        onPointerCancel={doUp}
+        style={{ touchAction: 'none' }}
       >
         <img
-          src={isDown ? bell.image2 : bell.image1}
+          ref={imgRef}
+          src={bell.image1}
           alt={bell.solfege}
           className="w-24 h-28 md:w-32 md:h-36 object-contain pointer-events-none"
           draggable={false}
@@ -122,20 +134,39 @@ function PlayableBell({ bell, isDown, onDown, onUp, isHighlighted }) {
   );
 }
 
-// Individual drum piece with direct mousedown/mouseup
-function PlayableDrumPiece({ drumId, info, isDown, onDown, onUp, style, className }) {
+// ============================================================================
+// Drum piece with imperative image swap. Same pattern as PlayableBell.
+// ============================================================================
+function PlayableDrumPiece({ drumId, info, onDown, onUp, style, registerRef }) {
+  const imgRef = useRef(null);
+
+  useEffect(() => {
+    if (registerRef) registerRef(drumId, imgRef);
+    return () => { if (registerRef) registerRef(drumId, null); };
+  }, [drumId, registerRef]);
+
+  const doDown = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (imgRef.current) imgRef.current.src = info.img2;
+    onDown(drumId);
+  };
+  const doUp = () => {
+    if (imgRef.current) imgRef.current.src = info.img1;
+    onUp(drumId);
+  };
+
   return (
     <>
       <img
-        src={isDown ? info.img2 : info.img1}
+        ref={imgRef}
+        src={info.img1}
         alt={info.label}
-        className={`absolute object-contain cursor-pointer ${className || ''}`}
-        style={{ ...style, touchAction: 'manipulation', transform: isDown ? `${style?.transform || ''} scale(0.95)` : style?.transform || '', transition: 'transform 0.05s' }}
-        onMouseDown={() => onDown(drumId)}
-        onMouseUp={() => onUp(drumId)}
-        onMouseLeave={() => onUp(drumId)}
-        onTouchStart={(e) => { e.preventDefault(); onDown(drumId); }}
-        onTouchEnd={(e) => { e.preventDefault(); onUp(drumId); }}
+        className="absolute object-contain cursor-pointer"
+        style={{ ...style, touchAction: 'none' }}
+        onPointerDown={doDown}
+        onPointerUp={doUp}
+        onPointerLeave={doUp}
+        onPointerCancel={doUp}
         draggable={false}
       />
       <div className="absolute text-[10px] font-bold bg-white/80 rounded-full w-5 h-5 flex items-center justify-center border border-[var(--jma-dark)] pointer-events-none"
@@ -144,37 +175,32 @@ function PlayableDrumPiece({ drumId, info, isDown, onDown, onUp, style, classNam
   );
 }
 
-function DrumKitPlayable({ bellPress, drumPress }) {
+function DrumKitPlayable({ onDrumDown, onDrumUp, registerDrumRef }) {
   return (
     <div className="relative mx-auto" style={{ width: '500px', height: '320px' }}>
-      <PlayableDrumPiece drumId="crash" info={DRUM_INFO.crash} isDown={drumPress.isPressed('crash')} onDown={drumPress.press} onUp={drumPress.release}
-        style={{ left: '70px', bottom: '170px', height: '130px', zIndex: 1, badgeLeft: '118px', badgeBottom: '168px' }} />
-      <PlayableDrumPiece drumId="ride" info={DRUM_INFO.ride} isDown={drumPress.isPressed('ride')} onDown={drumPress.press} onUp={drumPress.release}
+      <PlayableDrumPiece drumId="crash"  info={DRUM_INFO.crash}  onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
+        style={{ left: '70px',  bottom: '170px', height: '130px', zIndex: 1, badgeLeft: '118px', badgeBottom: '168px' }} />
+      <PlayableDrumPiece drumId="ride"   info={DRUM_INFO.ride}   onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
         style={{ left: '320px', bottom: '150px', height: '160px', zIndex: 1, badgeLeft: '385px', badgeBottom: '148px' }} />
-      <PlayableDrumPiece drumId="hihat" info={DRUM_INFO.hihat} isDown={drumPress.isPressed('hihat')} onDown={drumPress.press} onUp={drumPress.release}
-        style={{ left: '0px', bottom: '25px', height: '210px', zIndex: 3, badgeLeft: '30px', badgeBottom: '23px' }} />
-      <img src="/assets/drums/kICK 1.png" alt="Kick" className="absolute object-contain cursor-pointer"
-        style={{ left: '155px', bottom: '0px', width: '185px', zIndex: 3, touchAction: 'manipulation', transform: drumPress.isPressed('kick') ? 'scale(0.95)' : 'scale(1)', transition: 'transform 0.05s' }}
-        onMouseDown={() => drumPress.press('kick')} onMouseUp={() => drumPress.release('kick')} onMouseLeave={() => drumPress.release('kick')}
-        onTouchStart={(e) => { e.preventDefault(); drumPress.press('kick'); }} onTouchEnd={(e) => { e.preventDefault(); drumPress.release('kick'); }} />
-      <div className="absolute text-[10px] font-bold bg-white/80 rounded-full w-5 h-5 flex items-center justify-center border border-[var(--jma-dark)] pointer-events-none"
-        style={{ left: '240px', bottom: '-2px', zIndex: 10, color: '#E74C3C' }}>X</div>
-      <PlayableDrumPiece drumId="lowTom" info={DRUM_INFO.lowTom} isDown={drumPress.isPressed('lowTom')} onDown={drumPress.press} onUp={drumPress.release}
-        style={{ left: '140px', bottom: '155px', width: '90px', zIndex: 3, badgeLeft: '178px', badgeBottom: '153px' }} />
+      <PlayableDrumPiece drumId="hihat"  info={DRUM_INFO.hihat}  onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
+        style={{ left: '0px',   bottom: '25px',  height: '210px', zIndex: 3, badgeLeft: '30px',  badgeBottom: '23px'  }} />
+      <PlayableDrumPiece drumId="kick"   info={DRUM_INFO.kick}   onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
+        style={{ left: '155px', bottom: '0px',   width: '185px',  zIndex: 3, badgeLeft: '240px', badgeBottom: '-2px'  }} />
+      <PlayableDrumPiece drumId="lowTom" info={DRUM_INFO.lowTom} onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
+        style={{ left: '140px', bottom: '155px', width: '90px',   zIndex: 3, badgeLeft: '178px', badgeBottom: '153px' }} />
+      {/* Toms T-bar base (static decoration) */}
       <img src="/assets/drums/toms-base.png" alt="Toms base" className="absolute object-contain pointer-events-none"
         style={{ left: '215px', bottom: '143px', width: '50px', zIndex: 4 }} />
-      <PlayableDrumPiece drumId="tom" info={DRUM_INFO.tom} isDown={drumPress.isPressed('tom')} onDown={drumPress.press} onUp={drumPress.release}
-        style={{ left: '252px', bottom: '158px', width: '78px', zIndex: 5, badgeLeft: '284px', badgeBottom: '156px' }} />
-      <PlayableDrumPiece drumId="snare" info={DRUM_INFO.snare} isDown={drumPress.isPressed('snare')} onDown={drumPress.press} onUp={drumPress.release}
-        style={{ left: '80px', bottom: '12px', width: '110px', zIndex: 6, badgeLeft: '128px', badgeBottom: '10px' }} />
+      <PlayableDrumPiece drumId="tom"    info={DRUM_INFO.tom}    onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
+        style={{ left: '252px', bottom: '158px', width: '78px',   zIndex: 5, badgeLeft: '284px', badgeBottom: '156px' }} />
+      <PlayableDrumPiece drumId="snare"  info={DRUM_INFO.snare}  onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
+        style={{ left: '80px',  bottom: '12px',  width: '110px',  zIndex: 6, badgeLeft: '128px', badgeBottom: '10px'  }} />
     </div>
   );
 }
 
 function FreePlayPage() {
   const { playBellNote, playDrumSound, initAudioContext } = useAudio();
-  const bellPress = usePressState();
-  const drumPress = usePressState();
 
   const [lastNote, setLastNote] = useState(null);
   const [playedNotes, setPlayedNotes] = useState([]);
@@ -191,6 +217,21 @@ function FreePlayPage() {
   const [guidedMode, setGuidedMode] = useState(false);
   const [guidedSongIdx, setGuidedSongIdx] = useState(0);
   const [guidedStep, setGuidedStep] = useState(0);
+
+  // Refs for imperative image swaps (keyboard access)
+  const bellRefsRef = useRef({});
+  const drumRefsRef = useRef({});
+  const xyloRef = useRef(null);
+  const pianoRef = useRef(null);
+
+  const registerBellRef = useCallback((note, ref) => {
+    if (ref) bellRefsRef.current[note] = ref;
+    else delete bellRefsRef.current[note];
+  }, []);
+  const registerDrumRef = useCallback((id, ref) => {
+    if (ref) drumRefsRef.current[id] = ref;
+    else delete drumRefsRef.current[id];
+  }, []);
 
   const audioCtxRef = useRef(null);
   const extraBuffersRef = useRef({});
@@ -228,10 +269,9 @@ function FreePlayPage() {
     setTimeout(() => setParticles(prev => prev.filter(p => p.id !== id)), 600);
   }, []);
 
-  // Wrap press/release to also play sound and track notes
+  // Bell down: play sound + track state (visual swap already happened in PlayableBell handler)
   const onBellDown = useCallback((note) => {
     initAudioContext();
-    bellPress.press(note);
     playModeSound(note);
     setLastNote(note);
     setPlayedNotes(prev => [...prev.slice(-11), note]);
@@ -242,56 +282,108 @@ function FreePlayPage() {
       const song = GUIDED_SONGS[guidedSongIdx];
       if (song && note === song.notes[guidedStep]) setGuidedStep(prev => prev + 1 >= song.notes.length ? 0 : prev + 1);
     }
-  }, [initAudioContext, bellPress, playModeSound, isRecording, guidedMode, guidedSongIdx, guidedStep, spawnParticles]);
+  }, [initAudioContext, playModeSound, isRecording, guidedMode, guidedSongIdx, guidedStep, spawnParticles]);
 
-  const onBellUp = useCallback((note) => {
-    bellPress.release(note);
-  }, [bellPress]);
-
-  const origDrumPress = drumPress.press;
-  const origDrumRelease = drumPress.release;
+  const onBellUp = useCallback(() => {}, []);
 
   const onDrumDown = useCallback((drumId) => {
     initAudioContext();
-    origDrumPress(drumId);
     playDrumSound(drumId);
     setStreak(prev => prev + 1);
     spawnParticles(DRUM_INFO[drumId]?.color || '#E74C3C');
     if (isRecording) setRecording(prev => [...prev, { note: drumId, type: 'drum', time: Date.now() - recordStartRef.current }]);
-  }, [initAudioContext, origDrumPress, playDrumSound, isRecording, spawnParticles]);
+  }, [initAudioContext, playDrumSound, isRecording, spawnParticles]);
 
-  const onDrumUp = useCallback((drumId) => {
-    origDrumRelease(drumId);
-  }, [origDrumRelease]);
+  const onDrumUp = useCallback(() => {}, []);
 
-  // Override drum press/release with our wrappers
-  const wrappedDrumPress = { ...drumPress, press: onDrumDown, release: onDrumUp };
-
-  // Keyboard: keydown = press, keyup = release
+  // Keyboard: imperatively swap image via refs BEFORE calling sound handlers
   useEffect(() => {
+    const pressedBells = new Set();
+    const pressedDrums = new Set();
+
     const down = (e) => {
       const key = e.key.toLowerCase();
       const bellNote = KEY_TO_NOTE[e.key];
-      if (bellNote && !bellPress.isPressed(bellNote)) { onBellDown(bellNote); return; }
+      if (bellNote && !pressedBells.has(bellNote)) {
+        pressedBells.add(bellNote);
+        // Swap image based on active tab
+        if (activeTab === 'bells') {
+          const bell = BELLS.find(b => b.note === bellNote);
+          const r = bellRefsRef.current[bellNote];
+          if (r && r.current && bell) r.current.src = bell.image2;
+        } else if (activeTab === 'xylophone' && xyloRef.current) {
+          xyloRef.current.press(bellNote);
+        } else if (activeTab === 'piano' && pianoRef.current) {
+          pianoRef.current.press(bellNote);
+        }
+        onBellDown(bellNote);
+        return;
+      }
       const drumId = DRUM_KEY_MAP[key];
-      if (drumId && !drumPress.isPressed(drumId)) onDrumDown(drumId);
+      if (drumId && !pressedDrums.has(drumId)) {
+        pressedDrums.add(drumId);
+        // Swap drum image if on drums tab
+        if (activeTab === 'drums') {
+          const info = DRUM_INFO[drumId];
+          const r = drumRefsRef.current[drumId];
+          if (r && r.current && info) r.current.src = info.img2;
+        }
+        onDrumDown(drumId);
+      }
     };
     const up = (e) => {
       const key = e.key.toLowerCase();
       const bellNote = KEY_TO_NOTE[e.key];
-      if (bellNote) onBellUp(bellNote);
+      if (bellNote) {
+        pressedBells.delete(bellNote);
+        if (activeTab === 'bells') {
+          const bell = BELLS.find(b => b.note === bellNote);
+          const r = bellRefsRef.current[bellNote];
+          if (r && r.current && bell) r.current.src = bell.image1;
+        } else if (activeTab === 'xylophone' && xyloRef.current) {
+          xyloRef.current.release(bellNote);
+        } else if (activeTab === 'piano' && pianoRef.current) {
+          pianoRef.current.release(bellNote);
+        }
+        onBellUp(bellNote);
+      }
       const drumId = DRUM_KEY_MAP[key];
-      if (drumId) onDrumUp(drumId);
+      if (drumId) {
+        pressedDrums.delete(drumId);
+        if (activeTab === 'drums') {
+          const info = DRUM_INFO[drumId];
+          const r = drumRefsRef.current[drumId];
+          if (r && r.current && info) r.current.src = info.img1;
+        }
+        onDrumUp(drumId);
+      }
     };
     window.addEventListener('keydown', down);
     window.addEventListener('keyup', up);
     return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
-  }, [onBellDown, onBellUp, onDrumDown, onDrumUp, bellPress, drumPress]);
+  }, [onBellDown, onBellUp, onDrumDown, onDrumUp, activeTab]);
 
   useEffect(() => { const t = setTimeout(() => setStreak(0), 3000); return () => clearTimeout(t); }, [streak]);
 
   const startRecording = useCallback(() => { setRecording([]); setIsRecording(true); recordStartRef.current = Date.now(); }, []);
   const stopRecording = useCallback(() => setIsRecording(false), []);
+
+  // Helper to briefly flash an image for playback
+  const flashBell = useCallback((note, ms = 120) => {
+    const bell = BELLS.find(b => b.note === note);
+    const r = bellRefsRef.current[note];
+    if (!bell || !r || !r.current) return;
+    r.current.src = bell.image2;
+    setTimeout(() => { if (r.current) r.current.src = bell.image1; }, ms);
+  }, []);
+  const flashDrum = useCallback((drumId, ms = 120) => {
+    const info = DRUM_INFO[drumId];
+    const r = drumRefsRef.current[drumId];
+    if (!info || !r || !r.current) return;
+    r.current.src = info.img2;
+    setTimeout(() => { if (r.current) r.current.src = info.img1; }, ms);
+  }, []);
+
   const playBack = useCallback(() => {
     if (recording.length === 0 || isPlayingBack) return;
     setIsPlayingBack(true);
@@ -299,12 +391,12 @@ function FreePlayPage() {
     playbackTimeouts.current = [];
     recording.forEach(({ note, type, time }) => {
       playbackTimeouts.current.push(setTimeout(() => {
-        if (type === 'drum') { onDrumDown(note); setTimeout(() => onDrumUp(note), 120); }
-        else { onBellDown(note); setTimeout(() => onBellUp(note), 120); }
+        if (type === 'drum') { flashDrum(note); onDrumDown(note); }
+        else { flashBell(note); onBellDown(note); }
       }, time));
     });
     playbackTimeouts.current.push(setTimeout(() => setIsPlayingBack(false), (recording[recording.length - 1]?.time || 0) + 500));
-  }, [recording, isPlayingBack, onBellDown, onBellUp, onDrumDown, onDrumUp]);
+  }, [recording, isPlayingBack, onBellDown, onDrumDown, flashBell, flashDrum]);
 
   const currentGuidedSong = GUIDED_SONGS[guidedSongIdx];
   const nextGuidedNote = guidedMode && currentGuidedSong ? currentGuidedSong.notes[guidedStep] : null;
@@ -375,7 +467,7 @@ function FreePlayPage() {
 
         {isDrumTab ? (
           <motion.div className="game-board p-4 md:p-6" initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
-            <DrumKitPlayable bellPress={bellPress} drumPress={wrappedDrumPress} />
+            <DrumKitPlayable onDrumDown={onDrumDown} onDrumUp={onDrumUp} registerDrumRef={registerDrumRef} />
           </motion.div>
         ) : (
           <>
@@ -392,12 +484,13 @@ function FreePlayPage() {
               {activeTab === 'bells' && (
                 <div className="bell-row" data-testid="jelly-bells-row">
                   {BELLS.map(bell => (
-                    <PlayableBell key={bell.note} bell={bell} isDown={bellPress.isPressed(bell.note)} onDown={onBellDown} onUp={onBellUp} isHighlighted={nextGuidedNote === bell.note} />
+                    <PlayableBell key={bell.note} bell={bell} onDown={onBellDown} onUp={onBellUp}
+                      isHighlighted={nextGuidedNote === bell.note} registerRef={registerBellRef} />
                   ))}
                 </div>
               )}
-              {activeTab === 'xylophone' && <XylophoneInstrument onPlayNote={onBellDown} onNoteUp={onBellUp} pressedKeys={bellPress.pressed} highlightedNote={nextGuidedNote} />}
-              {activeTab === 'piano' && <PianoInstrument onPlayNote={onBellDown} onNoteUp={onBellUp} pressedKeys={bellPress.pressed} highlightedNote={nextGuidedNote} />}
+              {activeTab === 'xylophone' && <XylophoneInstrument ref={xyloRef} onPlayNote={onBellDown} onNoteUp={onBellUp} highlightedNote={nextGuidedNote} />}
+              {activeTab === 'piano' && <PianoInstrument ref={pianoRef} onPlayNote={onBellDown} onNoteUp={onBellUp} highlightedNote={nextGuidedNote} />}
             </motion.div>
           </>
         )}
