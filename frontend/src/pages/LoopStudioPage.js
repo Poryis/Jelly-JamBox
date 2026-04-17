@@ -23,6 +23,9 @@ const TRACK_PRESETS = [
   { id: 'drum_snare', label: 'Snare', type: 'drum', note: 'snare', color: '#3498DB' },
   { id: 'drum_hihat', label: 'Hi-Hat', type: 'drum', note: 'hihat', color: '#F1C40F' },
   { id: 'drum_crash', label: 'Crash', type: 'drum', note: 'crash', color: '#E67E22' },
+  { id: 'scratch_pull', label: 'Scratch Pull', type: 'scratch', note: 'scratchPull', color: '#1ABC9C' },
+  { id: 'scratch_push', label: 'Scratch Push', type: 'scratch', note: 'scratchPush', color: '#16A085' },
+  { id: 'scratch_pp', label: 'Scratch P/P', type: 'scratch', note: 'scratchPushPull', color: '#2ECC71' },
 ];
 
 // Pre-made loop patterns
@@ -114,7 +117,7 @@ function LoopStudioPage() {
         const preset = TRACK_PRESETS.find(p => p.id === trackId);
         if (preset?.type === 'bell') {
           playBellNote(preset.note);
-        } else if (preset?.type === 'drum') {
+        } else if (preset?.type === 'drum' || preset?.type === 'scratch') {
           playDrumSound(preset.note);
         }
       }

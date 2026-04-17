@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Play, Trophy, ChevronLeft, ChevronRight, Zap } from 'lucide-react';
+import { Play, Trophy, Zap } from 'lucide-react';
 import { BELLS, KEY_TO_NOTE } from '../components/JellyBells';
 import { GameHeader, FeedbackPopup, ProgressBar } from '../components/GameUI';
 import useAudio from '../hooks/useAudio';
@@ -10,24 +10,32 @@ import { getHighScore, saveHighScore, getTopScores } from '../hooks/useScores';
 
 const NOTE_ORDER = ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'High C'];
 
-function FallingNote({ note, laneIndex, totalLanes, speed }) {
+// Falling bell image note
+function FallingBellNote({ note, laneIndex, totalLanes, speed }) {
   const bell = BELLS.find(b => b.note === note);
   const laneWidth = 100 / totalLanes;
 
   return (
     <motion.div
-      className="note-block"
+      className="absolute flex flex-col items-center"
       style={{
-        backgroundColor: bell?.color || '#ccc',
-        position: 'absolute',
         left: `${laneIndex * laneWidth + laneWidth / 2}%`,
-        transform: 'translateX(-50%)'
+        transform: 'translateX(-50%)',
       }}
-      initial={{ top: -60 }}
-      animate={{ top: 'calc(100% + 60px)' }}
+      initial={{ top: -80 }}
+      animate={{ top: 'calc(100% + 80px)' }}
       transition={{ duration: speed / 1000, ease: 'linear' }}
     >
-      {bell?.solfege || note}
+      <img
+        src={bell?.image1}
+        alt={bell?.solfege}
+        className="w-10 h-12 md:w-12 md:h-14 object-contain drop-shadow-md"
+        draggable={false}
+      />
+      <span className="text-xs font-bold mt-0.5 px-1.5 rounded-full text-white"
+        style={{ backgroundColor: bell?.color, textShadow: '1px 1px 0 rgba(0,0,0,0.3)' }}>
+        {bell?.solfege}
+      </span>
     </motion.div>
   );
 }
@@ -64,10 +72,7 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
     return uniqueNotes.sort((a, b) => NOTE_ORDER.indexOf(a) - NOTE_ORDER.indexOf(b));
   }, [selectedSong.notes]);
 
-  // Keep ref in sync
-  useEffect(() => {
-    fallingNotesRef.current = fallingNotes;
-  }, [fallingNotes]);
+  useEffect(() => { fallingNotesRef.current = fallingNotes; }, [fallingNotes]);
 
   const startGame = useCallback(() => {
     initAudioContext();
@@ -87,9 +92,7 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
     if (matchingNote) {
       setScore(prev => prev + 100);
       setGameStats(prev => ({
-        ...prev,
-        perfect: prev.perfect + 1,
-        streak: prev.streak + 1,
+        ...prev, perfect: prev.perfect + 1, streak: prev.streak + 1,
         maxStreak: Math.max(prev.maxStreak, prev.streak + 1)
       }));
       setFeedback('perfect');
@@ -124,9 +127,7 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
     if (gameState !== 'playing') return;
     const spawnNote = () => {
       if (currentNoteIndex >= selectedSong.notes.length) {
-        setTimeout(() => {
-          setGameState('finished');
-        }, 2000);
+        setTimeout(() => setGameState('finished'), 2000);
         return;
       }
       const note = selectedSong.notes[currentNoteIndex];
@@ -157,10 +158,7 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
     if (gameState !== 'finished') return;
     const total = gameStats.perfect + gameStats.miss;
     const accuracy = total > 0 ? Math.round((gameStats.perfect / total) * 100) : 0;
-    const newRecord = saveHighScore(selectedSong.id, speed, score, {
-      accuracy,
-      maxStreak: gameStats.maxStreak
-    });
+    const newRecord = saveHighScore(selectedSong.id, speed, score, { accuracy, maxStreak: gameStats.maxStreak });
     setIsNewRecord(newRecord);
   }, [gameState, selectedSong.id, speed, score, gameStats]);
 
@@ -209,15 +207,9 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
           </div>
         </div>
         <div className="flex gap-3">
-          <motion.button data-testid="play-again-button" className="chunky-btn bg-[var(--jma-green)] text-white px-6 py-3 font-bold" onClick={startGame} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            Play Again
-          </motion.button>
-          <motion.button className="chunky-btn bg-white px-6 py-3 font-bold" style={{ color: 'var(--jma-dark)' }} onClick={() => setGameState('menu')} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            Pick Song
-          </motion.button>
-          <motion.button data-testid="home-button-results" className="chunky-btn bg-white px-6 py-3 font-bold" style={{ color: 'var(--jma-dark)' }} onClick={() => navigate('/')} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            Home
-          </motion.button>
+          <motion.button data-testid="play-again-button" className="chunky-btn bg-[var(--jma-green)] text-white px-6 py-3 font-bold" onClick={startGame} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Play Again</motion.button>
+          <motion.button className="chunky-btn bg-white px-6 py-3 font-bold" style={{ color: 'var(--jma-dark)' }} onClick={() => setGameState('menu')} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Pick Song</motion.button>
+          <motion.button data-testid="home-button-results" className="chunky-btn bg-white px-6 py-3 font-bold" style={{ color: 'var(--jma-dark)' }} onClick={() => navigate('/')} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Home</motion.button>
         </div>
       </div>
     );
@@ -229,88 +221,53 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
     return (
       <div className="min-h-screen sunburst-bg flex flex-col items-center p-4 pt-20 pb-8" data-testid="rhythm-game-menu">
         <GameHeader showHomeButton={true} />
-        <motion.h1 className="text-3xl md:text-5xl font-black mb-2 text-center font-display" style={{ color: 'var(--jma-dark)' }} initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
-          Rhythm Game
-        </motion.h1>
-        <p className="text-sm mb-2 bg-white rounded-xl border-2 border-[var(--jma-dark)] px-4 py-1" style={{ color: 'var(--jma-dark)' }}>
-          <strong>Controls:</strong> Keys 1-8, click, or tap
-        </p>
-
-        {/* High Scores Toggle */}
+        <motion.h1 className="text-3xl md:text-5xl font-black mb-2 text-center font-display" style={{ color: 'var(--jma-dark)' }} initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>Rhythm Game</motion.h1>
+        <p className="text-sm mb-2 bg-white rounded-xl border-2 border-[var(--jma-dark)] px-4 py-1" style={{ color: 'var(--jma-dark)' }}><strong>Controls:</strong> Keys 1-8, click, or tap</p>
         <button data-testid="toggle-high-scores" className="text-sm font-bold mb-4 underline" style={{ color: 'var(--jma-blue)' }} onClick={() => setShowHighScores(!showHighScores)}>
           {showHighScores ? 'Hide' : 'Show'} High Scores <Trophy className="inline w-4 h-4" />
         </button>
-
         {showHighScores && topScores.length > 0 && (
           <motion.div className="game-card p-4 mb-4 w-full max-w-lg" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}>
             <h3 className="font-bold text-center mb-2 font-display">Top Scores</h3>
             <div className="space-y-1">
               {topScores.map((s, i) => {
                 const song = SONG_LIBRARY.find(sl => sl.id === s.songId);
-                return (
-                  <div key={i} className="flex justify-between text-sm px-2 py-1 rounded bg-[var(--jma-bg)]">
-                    <span className="font-bold">{i+1}. {song?.name || s.songId}</span>
-                    <span>{s.score.toLocaleString()} ({s.speed})</span>
-                  </div>
-                );
+                return (<div key={i} className="flex justify-between text-sm px-2 py-1 rounded bg-[var(--jma-bg)]"><span className="font-bold">{i+1}. {song?.name || s.songId}</span><span>{s.score.toLocaleString()} ({s.speed})</span></div>);
               })}
             </div>
           </motion.div>
         )}
-
-        {/* Speed Selector */}
         <div className="flex gap-2 mb-4">
           {Object.entries(SPEED_SETTINGS).map(([key, cfg]) => (
-            <motion.button
-              key={key}
-              data-testid={`speed-${key}`}
+            <motion.button key={key} data-testid={`speed-${key}`}
               className={`chunky-btn px-4 py-2 text-sm font-bold ${speed === key ? 'ring-4 ring-[var(--jma-yellow)]' : ''}`}
               style={{ backgroundColor: cfg.color, color: key === 'normal' ? 'var(--jma-dark)' : 'white' }}
-              onClick={() => setSpeed(key)}
-              whileTap={{ scale: 0.95 }}
-            >
+              onClick={() => setSpeed(key)} whileTap={{ scale: 0.95 }}>
               <Zap className="inline w-4 h-4 mr-1" />{cfg.label}
             </motion.button>
           ))}
         </div>
-
-        {/* Category filter */}
         <div className="flex gap-2 mb-3 flex-wrap justify-center">
           {categories.map(cat => (
-            <button key={cat} className={`px-3 py-1 rounded-full text-sm font-bold border-2 border-[var(--jma-dark)] transition-all ${categoryFilter === cat ? 'bg-[var(--jma-dark)] text-white' : 'bg-white'}`} onClick={() => setCategoryFilter(cat)}>
-              {cat}
-            </button>
+            <button key={cat} className={`px-3 py-1 rounded-full text-sm font-bold border-2 border-[var(--jma-dark)] transition-all ${categoryFilter === cat ? 'bg-[var(--jma-dark)] text-white' : 'bg-white'}`} onClick={() => setCategoryFilter(cat)}>{cat}</button>
           ))}
         </div>
-
-        {/* Song grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 w-full max-w-2xl mb-4 max-h-[40vh] overflow-y-auto pr-1">
           {filteredSongs.map((song) => {
             const highScore = getHighScore(song.id, speed);
             return (
-              <motion.button
-                key={song.id}
-                data-testid={`song-${song.id}`}
+              <motion.button key={song.id} data-testid={`song-${song.id}`}
                 className={`level-card p-3 text-left flex items-center gap-3 ${selectedSong.id === song.id ? 'ring-4 ring-[var(--jma-blue)]' : ''}`}
-                onClick={() => setSelectedSong(song)}
-                whileHover={{ scale: 1.02 }}
-              >
+                onClick={() => setSelectedSong(song)} whileHover={{ scale: 1.02 }}>
                 <div className="flex-1">
                   <h3 className="text-base font-bold font-display">{song.name}</h3>
                   <p className="text-xs opacity-60">{song.category} - {song.notes.length} notes</p>
                 </div>
-                {highScore && (
-                  <div className="text-right">
-                    <p className="text-xs font-bold" style={{ color: 'var(--jma-orange)' }}>
-                      <Trophy className="inline w-3 h-3" /> {highScore.score}
-                    </p>
-                  </div>
-                )}
+                {highScore && (<div className="text-right"><p className="text-xs font-bold" style={{ color: 'var(--jma-orange)' }}><Trophy className="inline w-3 h-3" /> {highScore.score}</p></div>)}
               </motion.button>
             );
           })}
         </div>
-
         <motion.button data-testid="start-game-button" className="chunky-btn bg-[var(--jma-green)] text-white px-8 py-3 flex items-center gap-3" onClick={startGame} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
           <Play className="w-6 h-6" /><span className="text-xl font-bold font-display">START!</span>
         </motion.button>
@@ -318,7 +275,7 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
     );
   }
 
-  // PLAYING screen
+  // PLAYING screen - with Jelly Bell images!
   return (
     <div className="min-h-screen sunburst-cool flex flex-col" data-testid="rhythm-game-playing">
       <GameHeader title={selectedSong.name} score={score} streak={gameStats.streak} showHomeButton={true} />
@@ -328,36 +285,51 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
       <AnimatePresence>{feedback && <FeedbackPopup feedback={feedback} />}</AnimatePresence>
       <main className="flex-1 flex flex-col pt-24 pb-4 px-2 md:px-4">
         <div className="game-board flex-1 relative overflow-hidden">
+          {/* Lanes */}
           <div className="rhythm-lanes">
             {activeBells.map((note) => {
               const bell = BELLS.find(b => b.note === note);
               return (
-                <div key={note} className="rhythm-lane" style={{ backgroundColor: `${bell?.color}15` }}>
+                <div key={note} className="rhythm-lane" style={{ backgroundColor: `${bell?.color}10` }}>
                   <div className="lane-target" />
                 </div>
               );
             })}
+            {/* Falling bell images */}
             <AnimatePresence>
               {fallingNotes.map(note => (
-                <FallingNote key={note.id} note={note.note} laneIndex={note.laneIndex} totalLanes={activeBells.length} speed={speedConfig.fallSpeed} />
+                <FallingBellNote key={note.id} note={note.note} laneIndex={note.laneIndex} totalLanes={activeBells.length} speed={speedConfig.fallSpeed} />
               ))}
             </AnimatePresence>
           </div>
-          <div className="absolute bottom-0 left-0 right-0 bg-white border-t-4 border-[var(--jma-dark)] p-2">
-            <div className="flex justify-center gap-2">
+
+          {/* Bell images at bottom - like Free Play */}
+          <div className="absolute bottom-0 left-0 right-0 bg-white/95 border-t-4 border-[var(--jma-dark)] p-2">
+            <div className="flex justify-center gap-1 md:gap-2">
               {activeBells.map(note => {
                 const bell = BELLS.find(b => b.note === note);
                 const isKeyPressed = pressedKeys.has(bell?.key);
                 return (
                   <motion.button key={note} data-testid={`game-bell-${note}`}
-                    className="relative w-12 h-14 md:w-16 md:h-18 rounded-xl border-3 border-[var(--jma-dark)] flex items-center justify-center font-bold text-white text-sm md:text-base"
-                    style={{ backgroundColor: bell?.color, transform: isKeyPressed ? 'scale(0.92)' : 'scale(1)' }}
+                    className="relative flex flex-col items-center"
                     onClick={() => handlePlayNote(note)}
                     onTouchStart={(e) => { e.preventDefault(); handlePlayNote(note); }}
-                    whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                    animate={{ scale: isKeyPressed ? 0.9 : 1 }}
+                    transition={{ type: 'spring', stiffness: 500 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.9 }}
                   >
-                    {bell?.solfege}
-                    <span className="absolute -top-2 -right-1 w-5 h-5 rounded-full bg-white border border-[var(--jma-dark)] text-xs font-bold flex items-center justify-center" style={{ color: bell?.color }}>{bell?.key}</span>
+                    <img
+                      src={isKeyPressed ? bell?.image2 : bell?.image1}
+                      alt={bell?.solfege}
+                      className="w-10 h-12 md:w-14 md:h-16 object-contain"
+                      draggable={false}
+                    />
+                    <span className="text-[10px] md:text-xs font-bold" style={{ color: bell?.color }}>
+                      {bell?.solfege}
+                    </span>
+                    <span className="absolute -top-1 -right-0 w-4 h-4 md:w-5 md:h-5 rounded-full bg-white border border-[var(--jma-dark)] text-[8px] md:text-[10px] font-bold flex items-center justify-center"
+                      style={{ color: bell?.color }}>{bell?.key}</span>
                   </motion.button>
                 );
               })}

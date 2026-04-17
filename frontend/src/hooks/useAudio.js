@@ -33,7 +33,10 @@ const DRUM_AUDIO_FILES = {
   crash: '/assets/audio/Crash cymbal.mp3',
   ride: '/assets/audio/Ride.mp3',
   tom: '/assets/audio/Tom.mp3',
-  lowTom: '/assets/audio/Low Tom.mp3'
+  lowTom: '/assets/audio/Low Tom.mp3',
+  scratchPull: '/assets/audio/scratch-pull.mp3',
+  scratchPush: '/assets/audio/scratch-push.mp3',
+  scratchPushPull: '/assets/audio/scratch-push-pull.mp3'
 };
 
 export function useAudio() {
