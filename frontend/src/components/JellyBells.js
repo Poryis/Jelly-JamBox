@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useCallback, useEffect } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 
 export const BELLS = [
   { note: 'C', solfege: 'Do', color: '#FF3B30', image1: '/assets/bells/C 1.png', image2: '/assets/bells/C 2.png', key: '1' },
@@ -17,86 +17,77 @@ const KEY_TO_NOTE = {
   '5': 'G', '6': 'A', '7': 'B', '8': 'High C'
 };
 
-function JellyBell({ bell, onDown, onUp, isHighlighted, showNotation, isPressed }) {
-  return (
-    <motion.div className="bell-container" whileHover={{ scale: 1.05 }}>
-      <motion.button
-        data-testid={`bell-${bell.note.replace(' ', '-')}`}
-        className={`bell-instrument relative ${isHighlighted ? 'bell-highlight' : ''}`}
-        onPointerDown={(e) => { e.preventDefault(); onDown(bell.note); }}
-        onPointerUp={(e) => { e.preventDefault(); onUp(bell.note); }}
-        onPointerLeave={() => onUp(bell.note)}
-        animate={{ scale: isPressed ? 0.9 : 1 }}
-        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-        style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', touchAction: 'manipulation' }}
-      >
-        <img
-          src={isPressed ? bell.image2 : bell.image1}
-          alt={`${bell.solfege} bell`}
-          className="w-24 h-28 md:w-32 md:h-36 object-contain pointer-events-none"
-          draggable={false}
-        />
-        <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-white border-2 border-[var(--jma-dark)] flex items-center justify-center text-xs font-bold"
-          style={{ color: bell.color }}>{bell.key}</div>
-        <AnimatePresence>
-          {isHighlighted && (
-            <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1.2 }} exit={{ opacity: 0, scale: 0.8 }}
-              className="absolute inset-0 rounded-full" style={{ background: `radial-gradient(circle, ${bell.color}80 0%, transparent 70%)`, zIndex: -1 }} />
-          )}
-        </AnimatePresence>
-      </motion.button>
-      <div className="bell-note-label text-center">
-        <span style={{ color: bell.color }}>{bell.solfege}</span>
-        {showNotation && <span className="block text-xs opacity-70">({bell.note})</span>}
-      </div>
-    </motion.div>
-  );
-}
-
 function JellyBellsRow({ onPlayNote, onNoteUp, highlightedNote, showNotation = true, enableKeyboard = true }) {
-  const [pressedNotes, setPressedNotes] = useState(new Set());
+  // Plain object: { C: true, D: false, ... }
+  const [pressed, setPressed] = useState({});
 
   const handleDown = useCallback((note) => {
-    setPressedNotes(prev => new Set([...prev, note]));
+    setPressed(prev => ({ ...prev, [note]: true }));
     onPlayNote(note);
   }, [onPlayNote]);
 
   const handleUp = useCallback((note) => {
-    setPressedNotes(prev => { const s = new Set(prev); s.delete(note); return s; });
-    onNoteUp?.(note);
+    setPressed(prev => ({ ...prev, [note]: false }));
+    if (onNoteUp) onNoteUp(note);
   }, [onNoteUp]);
 
   useEffect(() => {
     if (!enableKeyboard) return;
-    const handleKeyDown = (e) => {
+    const onKeyDown = (e) => {
       const note = KEY_TO_NOTE[e.key];
-      if (note && !pressedNotes.has(note)) handleDown(note);
+      if (note && !pressed[note]) handleDown(note);
     };
-    const handleKeyUp = (e) => {
+    const onKeyUp = (e) => {
       const note = KEY_TO_NOTE[e.key];
       if (note) handleUp(note);
     };
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    return () => { window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('keyup', handleKeyUp); };
-  }, [enableKeyboard, handleDown, handleUp, pressedNotes]);
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    return () => { window.removeEventListener('keydown', onKeyDown); window.removeEventListener('keyup', onKeyUp); };
+  }, [enableKeyboard, handleDown, handleUp, pressed]);
 
   return (
     <div className="bell-row" data-testid="jelly-bells-row">
-      {BELLS.map((bell) => (
-        <JellyBell
-          key={bell.note}
-          bell={bell}
-          onDown={handleDown}
-          onUp={handleUp}
-          isHighlighted={highlightedNote === bell.note}
-          showNotation={showNotation}
-          isPressed={pressedNotes.has(bell.note)}
-        />
-      ))}
+      {BELLS.map((bell) => {
+        const isDown = !!pressed[bell.note];
+        return (
+          <div key={bell.note} className="bell-container flex flex-col items-center">
+            <div
+              data-testid={`bell-${bell.note.replace(' ', '-')}`}
+              className={`bell-instrument relative cursor-pointer select-none ${highlightedNote === bell.note ? 'bell-highlight' : ''}`}
+              onMouseDown={() => handleDown(bell.note)}
+              onMouseUp={() => handleUp(bell.note)}
+              onMouseLeave={() => handleUp(bell.note)}
+              onTouchStart={(e) => { e.preventDefault(); handleDown(bell.note); }}
+              onTouchEnd={(e) => { e.preventDefault(); handleUp(bell.note); }}
+              style={{ touchAction: 'manipulation', transform: isDown ? 'scale(0.9)' : 'scale(1)', transition: 'transform 0.05s' }}
+            >
+              <img
+                src={isDown ? bell.image2 : bell.image1}
+                alt={`${bell.solfege} bell`}
+                className="w-24 h-28 md:w-32 md:h-36 object-contain pointer-events-none"
+                draggable={false}
+              />
+              <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-white border-2 border-[var(--jma-dark)] flex items-center justify-center text-xs font-bold pointer-events-none"
+                style={{ color: bell.color }}>{bell.key}</div>
+              <AnimatePresence>
+                {highlightedNote === bell.note && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    className="absolute inset-0 rounded-full pointer-events-none"
+                    style={{ background: `radial-gradient(circle, ${bell.color}80 0%, transparent 70%)`, zIndex: -1 }} />
+                )}
+              </AnimatePresence>
+            </div>
+            <div className="bell-note-label text-center">
+              <span style={{ color: bell.color }}>{bell.solfege}</span>
+              {showNotation && <span className="block text-xs opacity-70">({bell.note})</span>}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-export { JellyBell, JellyBellsRow, KEY_TO_NOTE };
+export { JellyBellsRow, KEY_TO_NOTE };
 export default JellyBellsRow;

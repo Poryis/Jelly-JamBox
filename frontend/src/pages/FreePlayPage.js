@@ -38,7 +38,6 @@ const DRUM_INFO = {
 
 const noteToSolfege = { C: 'Do', D: 'Re', E: 'Mi', F: 'Fa', G: 'So', A: 'La', B: 'Ti', 'High C': 'Do' };
 
-// Subtle particle
 function ParticleBurst({ color }) {
   const x = useRef(Math.random() * (typeof window !== 'undefined' ? window.innerWidth - 60 : 800) + 30);
   const y = useRef(Math.random() * (typeof window !== 'undefined' ? window.innerHeight - 150 : 500) + 50);
@@ -83,85 +82,105 @@ function CharacterReaction({ streak }) {
   );
 }
 
-// Drum kit - clickable, assembled layout, press/release states
-function DrumKitPlayable({ onDrumDown, onDrumUp, pressedDrums }) {
-  const handleDown = (e, drumId) => { e.preventDefault(); onDrumDown(drumId); };
-  const handleUp = (e, drumId) => { e.preventDefault(); onDrumUp(drumId); };
-  const drumProps = (drumId) => ({
-    onPointerDown: (e) => handleDown(e, drumId),
-    onPointerUp: (e) => handleUp(e, drumId),
-    onPointerLeave: (e) => handleUp(e, drumId),
-    style: { touchAction: 'manipulation', cursor: 'pointer' }
-  });
+// Simple press tracker - plain object, guaranteed re-render
+function usePressState() {
+  const [pressed, setPressed] = useState({});
+  const press = useCallback((id) => setPressed(prev => ({ ...prev, [id]: true })), []);
+  const release = useCallback((id) => setPressed(prev => ({ ...prev, [id]: false })), []);
+  const isPressed = useCallback((id) => !!pressed[id], [pressed]);
+  return { pressed, press, release, isPressed };
+}
 
+// Individual bell with direct mousedown/mouseup
+function PlayableBell({ bell, isDown, onDown, onUp, isHighlighted }) {
+  return (
+    <div className="bell-container flex flex-col items-center">
+      <div
+        data-testid={`bell-${bell.note.replace(' ', '-')}`}
+        className={`bell-instrument relative cursor-pointer select-none ${isHighlighted ? 'bell-highlight' : ''}`}
+        onMouseDown={() => onDown(bell.note)}
+        onMouseUp={() => onUp(bell.note)}
+        onMouseLeave={() => onUp(bell.note)}
+        onTouchStart={(e) => { e.preventDefault(); onDown(bell.note); }}
+        onTouchEnd={(e) => { e.preventDefault(); onUp(bell.note); }}
+        style={{ touchAction: 'manipulation', transform: isDown ? 'scale(0.9)' : 'scale(1)', transition: 'transform 0.05s' }}
+      >
+        <img
+          src={isDown ? bell.image2 : bell.image1}
+          alt={bell.solfege}
+          className="w-24 h-28 md:w-32 md:h-36 object-contain pointer-events-none"
+          draggable={false}
+        />
+        <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-white border-2 border-[var(--jma-dark)] flex items-center justify-center text-xs font-bold pointer-events-none"
+          style={{ color: bell.color }}>{bell.key}</div>
+      </div>
+      <div className="bell-note-label text-center">
+        <span style={{ color: bell.color }}>{bell.solfege}</span>
+        <span className="block text-xs opacity-70">({bell.note})</span>
+      </div>
+    </div>
+  );
+}
+
+// Individual drum piece with direct mousedown/mouseup
+function PlayableDrumPiece({ drumId, info, isDown, onDown, onUp, style, className }) {
+  return (
+    <>
+      <img
+        src={isDown ? info.img2 : info.img1}
+        alt={info.label}
+        className={`absolute object-contain cursor-pointer ${className || ''}`}
+        style={{ ...style, touchAction: 'manipulation', transform: isDown ? `${style?.transform || ''} scale(0.95)` : style?.transform || '', transition: 'transform 0.05s' }}
+        onMouseDown={() => onDown(drumId)}
+        onMouseUp={() => onUp(drumId)}
+        onMouseLeave={() => onUp(drumId)}
+        onTouchStart={(e) => { e.preventDefault(); onDown(drumId); }}
+        onTouchEnd={(e) => { e.preventDefault(); onUp(drumId); }}
+        draggable={false}
+      />
+      <div className="absolute text-[10px] font-bold bg-white/80 rounded-full w-5 h-5 flex items-center justify-center border border-[var(--jma-dark)] pointer-events-none"
+        style={{ left: style?.badgeLeft, bottom: style?.badgeBottom, zIndex: 10, color: info.color }}>{info.key}</div>
+    </>
+  );
+}
+
+function DrumKitPlayable({ bellPress, drumPress }) {
   return (
     <div className="relative mx-auto" style={{ width: '500px', height: '320px' }}>
-      <motion.img src={pressedDrums.has('crash') ? DRUM_INFO.crash.img2 : DRUM_INFO.crash.img1}
-        alt="Crash" className="absolute object-contain" {...drumProps('crash')}
-        style={{ ...drumProps('crash').style, left: '70px', bottom: '170px', height: '130px', zIndex: 1 }}
-        animate={pressedDrums.has('crash') ? { rotate: -4 } : { rotate: 0 }} transition={{ duration: 0.05 }} />
+      <PlayableDrumPiece drumId="crash" info={DRUM_INFO.crash} isDown={drumPress.isPressed('crash')} onDown={drumPress.press} onUp={drumPress.release}
+        style={{ left: '70px', bottom: '170px', height: '130px', zIndex: 1, badgeLeft: '118px', badgeBottom: '168px' }} />
+      <PlayableDrumPiece drumId="ride" info={DRUM_INFO.ride} isDown={drumPress.isPressed('ride')} onDown={drumPress.press} onUp={drumPress.release}
+        style={{ left: '320px', bottom: '150px', height: '160px', zIndex: 1, badgeLeft: '385px', badgeBottom: '148px' }} />
+      <PlayableDrumPiece drumId="hihat" info={DRUM_INFO.hihat} isDown={drumPress.isPressed('hihat')} onDown={drumPress.press} onUp={drumPress.release}
+        style={{ left: '0px', bottom: '25px', height: '210px', zIndex: 3, badgeLeft: '30px', badgeBottom: '23px' }} />
+      <img src="/assets/drums/kICK 1.png" alt="Kick" className="absolute object-contain cursor-pointer"
+        style={{ left: '155px', bottom: '0px', width: '185px', zIndex: 3, touchAction: 'manipulation', transform: drumPress.isPressed('kick') ? 'scale(0.95)' : 'scale(1)', transition: 'transform 0.05s' }}
+        onMouseDown={() => drumPress.press('kick')} onMouseUp={() => drumPress.release('kick')} onMouseLeave={() => drumPress.release('kick')}
+        onTouchStart={(e) => { e.preventDefault(); drumPress.press('kick'); }} onTouchEnd={(e) => { e.preventDefault(); drumPress.release('kick'); }} />
       <div className="absolute text-[10px] font-bold bg-white/80 rounded-full w-5 h-5 flex items-center justify-center border border-[var(--jma-dark)] pointer-events-none"
-        style={{ left: '118px', bottom: '168px', zIndex: 10, color: DRUM_INFO.crash.color }}>W</div>
-
-      <motion.img src={pressedDrums.has('ride') ? DRUM_INFO.ride.img2 : DRUM_INFO.ride.img1}
-        alt="Ride" className="absolute object-contain" {...drumProps('ride')}
-        style={{ ...drumProps('ride').style, left: '320px', bottom: '150px', height: '160px', zIndex: 1 }}
-        animate={pressedDrums.has('ride') ? { rotate: 3 } : { rotate: 0 }} transition={{ duration: 0.05 }} />
-      <div className="absolute text-[10px] font-bold bg-white/80 rounded-full w-5 h-5 flex items-center justify-center border border-[var(--jma-dark)] pointer-events-none"
-        style={{ left: '385px', bottom: '148px', zIndex: 10, color: DRUM_INFO.ride.color }}>E</div>
-
-      <motion.img src={pressedDrums.has('hihat') ? DRUM_INFO.hihat.img2 : DRUM_INFO.hihat.img1}
-        alt="Hi-Hat" className="absolute object-contain" {...drumProps('hihat')}
-        style={{ ...drumProps('hihat').style, left: '0px', bottom: '25px', height: '210px', zIndex: 3 }}
-        animate={pressedDrums.has('hihat') ? { y: 3 } : { y: 0 }} transition={{ duration: 0.05 }} />
-      <div className="absolute text-[10px] font-bold bg-white/80 rounded-full w-5 h-5 flex items-center justify-center border border-[var(--jma-dark)] pointer-events-none"
-        style={{ left: '30px', bottom: '23px', zIndex: 10, color: DRUM_INFO.hihat.color }}>Q</div>
-
-      <motion.img src={DRUM_INFO.kick.img1}
-        alt="Kick" className="absolute object-contain" {...drumProps('kick')}
-        style={{ ...drumProps('kick').style, left: '155px', bottom: '0px', width: '185px', zIndex: 3 }}
-        animate={pressedDrums.has('kick') ? { scale: 0.95 } : { scale: 1 }} transition={{ duration: 0.05 }} />
-      <div className="absolute text-[10px] font-bold bg-white/80 rounded-full w-5 h-5 flex items-center justify-center border border-[var(--jma-dark)] pointer-events-none"
-        style={{ left: '240px', bottom: '-2px', zIndex: 10, color: DRUM_INFO.kick.color }}>X</div>
-
-      <motion.img src={pressedDrums.has('lowTom') ? DRUM_INFO.lowTom.img2 : DRUM_INFO.lowTom.img1}
-        alt="Tom 2" className="absolute object-contain" {...drumProps('lowTom')}
-        style={{ ...drumProps('lowTom').style, left: '140px', bottom: '155px', width: '90px', zIndex: 3 }}
-        animate={pressedDrums.has('lowTom') ? { scale: 0.95 } : { scale: 1 }} transition={{ duration: 0.05 }} />
-      <div className="absolute text-[10px] font-bold bg-white/80 rounded-full w-5 h-5 flex items-center justify-center border border-[var(--jma-dark)] pointer-events-none"
-        style={{ left: '178px', bottom: '153px', zIndex: 10, color: DRUM_INFO.lowTom.color }}>D</div>
-
+        style={{ left: '240px', bottom: '-2px', zIndex: 10, color: '#E74C3C' }}>X</div>
+      <PlayableDrumPiece drumId="lowTom" info={DRUM_INFO.lowTom} isDown={drumPress.isPressed('lowTom')} onDown={drumPress.press} onUp={drumPress.release}
+        style={{ left: '140px', bottom: '155px', width: '90px', zIndex: 3, badgeLeft: '178px', badgeBottom: '153px' }} />
       <img src="/assets/drums/toms-base.png" alt="Toms base" className="absolute object-contain pointer-events-none"
         style={{ left: '215px', bottom: '143px', width: '50px', zIndex: 4 }} />
-
-      <motion.img src={pressedDrums.has('tom') ? DRUM_INFO.tom.img2 : DRUM_INFO.tom.img1}
-        alt="Tom 1" className="absolute object-contain" {...drumProps('tom')}
-        style={{ ...drumProps('tom').style, left: '252px', bottom: '158px', width: '78px', zIndex: 5 }}
-        animate={pressedDrums.has('tom') ? { scale: 0.95 } : { scale: 1 }} transition={{ duration: 0.05 }} />
-      <div className="absolute text-[10px] font-bold bg-white/80 rounded-full w-5 h-5 flex items-center justify-center border border-[var(--jma-dark)] pointer-events-none"
-        style={{ left: '284px', bottom: '156px', zIndex: 10, color: DRUM_INFO.tom.color }}>S</div>
-
-      <motion.img src={pressedDrums.has('snare') ? DRUM_INFO.snare.img2 : DRUM_INFO.snare.img1}
-        alt="Snare" className="absolute object-contain" {...drumProps('snare')}
-        style={{ ...drumProps('snare').style, left: '80px', bottom: '12px', width: '110px', zIndex: 6 }}
-        animate={pressedDrums.has('snare') ? { scale: 0.95 } : { scale: 1 }} transition={{ duration: 0.05 }} />
-      <div className="absolute text-[10px] font-bold bg-white/80 rounded-full w-5 h-5 flex items-center justify-center border border-[var(--jma-dark)] pointer-events-none"
-        style={{ left: '128px', bottom: '10px', zIndex: 10, color: DRUM_INFO.snare.color }}>A</div>
+      <PlayableDrumPiece drumId="tom" info={DRUM_INFO.tom} isDown={drumPress.isPressed('tom')} onDown={drumPress.press} onUp={drumPress.release}
+        style={{ left: '252px', bottom: '158px', width: '78px', zIndex: 5, badgeLeft: '284px', badgeBottom: '156px' }} />
+      <PlayableDrumPiece drumId="snare" info={DRUM_INFO.snare} isDown={drumPress.isPressed('snare')} onDown={drumPress.press} onUp={drumPress.release}
+        style={{ left: '80px', bottom: '12px', width: '110px', zIndex: 6, badgeLeft: '128px', badgeBottom: '10px' }} />
     </div>
   );
 }
 
 function FreePlayPage() {
   const { playBellNote, playDrumSound, initAudioContext } = useAudio();
+  const bellPress = usePressState();
+  const drumPress = usePressState();
+
   const [lastNote, setLastNote] = useState(null);
   const [playedNotes, setPlayedNotes] = useState([]);
   const [particles, setParticles] = useState([]);
   const [streak, setStreak] = useState(0);
   const [activeTab, setActiveTab] = useState('bells');
-
-  // Press states: held down = in set, released = removed
-  const [pressedBells, setPressedBells] = useState(new Set());
-  const [pressedDrums, setPressedDrums] = useState(new Set());
 
   const [isRecording, setIsRecording] = useState(false);
   const [recording, setRecording] = useState([]);
@@ -209,11 +228,11 @@ function FreePlayPage() {
     setTimeout(() => setParticles(prev => prev.filter(p => p.id !== id)), 600);
   }, []);
 
-  // Bell DOWN - play sound, show pressed state
-  const handleBellDown = useCallback((note) => {
+  // Wrap press/release to also play sound and track notes
+  const onBellDown = useCallback((note) => {
     initAudioContext();
+    bellPress.press(note);
     playModeSound(note);
-    setPressedBells(prev => new Set([...prev, note]));
     setLastNote(note);
     setPlayedNotes(prev => [...prev.slice(-11), note]);
     setStreak(prev => prev + 1);
@@ -223,50 +242,51 @@ function FreePlayPage() {
       const song = GUIDED_SONGS[guidedSongIdx];
       if (song && note === song.notes[guidedStep]) setGuidedStep(prev => prev + 1 >= song.notes.length ? 0 : prev + 1);
     }
-  }, [initAudioContext, playModeSound, isRecording, guidedMode, guidedSongIdx, guidedStep, spawnParticles]);
+  }, [initAudioContext, bellPress, playModeSound, isRecording, guidedMode, guidedSongIdx, guidedStep, spawnParticles]);
 
-  // Bell UP - return to idle state
-  const handleBellUp = useCallback((note) => {
-    setPressedBells(prev => { const s = new Set(prev); s.delete(note); return s; });
-  }, []);
+  const onBellUp = useCallback((note) => {
+    bellPress.release(note);
+  }, [bellPress]);
 
-  // Drum DOWN
-  const handleDrumDown = useCallback((drumId) => {
+  const origDrumPress = drumPress.press;
+  const origDrumRelease = drumPress.release;
+
+  const onDrumDown = useCallback((drumId) => {
     initAudioContext();
+    origDrumPress(drumId);
     playDrumSound(drumId);
-    setPressedDrums(prev => new Set([...prev, drumId]));
     setStreak(prev => prev + 1);
     spawnParticles(DRUM_INFO[drumId]?.color || '#E74C3C');
     if (isRecording) setRecording(prev => [...prev, { note: drumId, type: 'drum', time: Date.now() - recordStartRef.current }]);
-  }, [initAudioContext, playDrumSound, isRecording, spawnParticles]);
+  }, [initAudioContext, origDrumPress, playDrumSound, isRecording, spawnParticles]);
 
-  // Drum UP
-  const handleDrumUp = useCallback((drumId) => {
-    setPressedDrums(prev => { const s = new Set(prev); s.delete(drumId); return s; });
-  }, []);
+  const onDrumUp = useCallback((drumId) => {
+    origDrumRelease(drumId);
+  }, [origDrumRelease]);
+
+  // Override drum press/release with our wrappers
+  const wrappedDrumPress = { ...drumPress, press: onDrumDown, release: onDrumUp };
 
   // Keyboard: keydown = press, keyup = release
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      const key = e.key.toLowerCase();
-      // Bell keys 1-8
-      const bellNote = KEY_TO_NOTE[e.key];
-      if (bellNote && !pressedBells.has(bellNote)) { handleBellDown(bellNote); return; }
-      // Drum keys
-      const drumId = DRUM_KEY_MAP[key];
-      if (drumId && !pressedDrums.has(drumId)) handleDrumDown(drumId);
-    };
-    const handleKeyUp = (e) => {
+    const down = (e) => {
       const key = e.key.toLowerCase();
       const bellNote = KEY_TO_NOTE[e.key];
-      if (bellNote) handleBellUp(bellNote);
+      if (bellNote && !bellPress.isPressed(bellNote)) { onBellDown(bellNote); return; }
       const drumId = DRUM_KEY_MAP[key];
-      if (drumId) handleDrumUp(drumId);
+      if (drumId && !drumPress.isPressed(drumId)) onDrumDown(drumId);
     };
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    return () => { window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('keyup', handleKeyUp); };
-  }, [handleBellDown, handleBellUp, handleDrumDown, handleDrumUp, pressedBells, pressedDrums]);
+    const up = (e) => {
+      const key = e.key.toLowerCase();
+      const bellNote = KEY_TO_NOTE[e.key];
+      if (bellNote) onBellUp(bellNote);
+      const drumId = DRUM_KEY_MAP[key];
+      if (drumId) onDrumUp(drumId);
+    };
+    window.addEventListener('keydown', down);
+    window.addEventListener('keyup', up);
+    return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
+  }, [onBellDown, onBellUp, onDrumDown, onDrumUp, bellPress, drumPress]);
 
   useEffect(() => { const t = setTimeout(() => setStreak(0), 3000); return () => clearTimeout(t); }, [streak]);
 
@@ -279,12 +299,12 @@ function FreePlayPage() {
     playbackTimeouts.current = [];
     recording.forEach(({ note, type, time }) => {
       playbackTimeouts.current.push(setTimeout(() => {
-        if (type === 'drum') { handleDrumDown(note); setTimeout(() => handleDrumUp(note), 120); }
-        else { handleBellDown(note); setTimeout(() => handleBellUp(note), 120); }
+        if (type === 'drum') { onDrumDown(note); setTimeout(() => onDrumUp(note), 120); }
+        else { onBellDown(note); setTimeout(() => onBellUp(note), 120); }
       }, time));
     });
     playbackTimeouts.current.push(setTimeout(() => setIsPlayingBack(false), (recording[recording.length - 1]?.time || 0) + 500));
-  }, [recording, isPlayingBack, handleBellDown, handleBellUp, handleDrumDown, handleDrumUp]);
+  }, [recording, isPlayingBack, onBellDown, onBellUp, onDrumDown, onDrumUp]);
 
   const currentGuidedSong = GUIDED_SONGS[guidedSongIdx];
   const nextGuidedNote = guidedMode && currentGuidedSong ? currentGuidedSong.notes[guidedStep] : null;
@@ -295,10 +315,8 @@ function FreePlayPage() {
       style={{ backgroundImage: 'url(/assets/backgrounds/clubhouse.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
       <GameHeader title="Free Play" showHomeButton={true} />
       <FullscreenButton />
-
       <AnimatePresence>{particles.map(p => <ParticleBurst key={p.id} color={p.color} />)}</AnimatePresence>
       <CharacterReaction streak={streak} />
-
       <motion.div className="fixed bottom-3 left-3 hidden md:block z-20"
         initial={{ x: -80, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.5 }}>
         <motion.img src="/assets/characters/charlie-polliwog.png" alt="Charlie" className="w-16 h-20 object-contain"
@@ -357,7 +375,7 @@ function FreePlayPage() {
 
         {isDrumTab ? (
           <motion.div className="game-board p-4 md:p-6" initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
-            <DrumKitPlayable onDrumDown={handleDrumDown} onDrumUp={handleDrumUp} pressedDrums={pressedDrums} />
+            <DrumKitPlayable bellPress={bellPress} drumPress={wrappedDrumPress} />
           </motion.div>
         ) : (
           <>
@@ -373,39 +391,13 @@ function FreePlayPage() {
             <motion.div className="game-board p-3 md:p-6" initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
               {activeTab === 'bells' && (
                 <div className="bell-row" data-testid="jelly-bells-row">
-                  {BELLS.map(bell => {
-                    const isPressed = pressedBells.has(bell.note);
-                    const isHighlighted = nextGuidedNote === bell.note;
-                    return (
-                      <motion.div key={bell.note} className="bell-container" whileHover={{ scale: 1.05 }}>
-                        <motion.button data-testid={`bell-${bell.note.replace(' ', '-')}`}
-                          className={`bell-instrument relative ${isHighlighted ? 'bell-highlight' : ''}`}
-                          onPointerDown={(e) => { e.preventDefault(); handleBellDown(bell.note); }}
-                          onPointerUp={(e) => { e.preventDefault(); handleBellUp(bell.note); }}
-                          onPointerLeave={() => handleBellUp(bell.note)}
-                          animate={{ scale: isPressed ? 0.9 : 1 }}
-                          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                          style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', touchAction: 'manipulation' }}>
-                          <img src={isPressed ? bell.image2 : bell.image1} alt={bell.solfege}
-                            className="w-24 h-28 md:w-32 md:h-36 object-contain pointer-events-none" draggable={false} />
-                          <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-white border-2 border-[var(--jma-dark)] flex items-center justify-center text-xs font-bold"
-                            style={{ color: bell.color }}>{bell.key}</div>
-                          {isHighlighted && (
-                            <motion.div className="absolute inset-0 rounded-full" style={{ background: `radial-gradient(circle, ${bell.color}80 0%, transparent 70%)`, zIndex: -1 }}
-                              animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 0.6 }} />
-                          )}
-                        </motion.button>
-                        <div className="bell-note-label text-center">
-                          <span style={{ color: bell.color }}>{bell.solfege}</span>
-                          <span className="block text-xs opacity-70">({bell.note})</span>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
+                  {BELLS.map(bell => (
+                    <PlayableBell key={bell.note} bell={bell} isDown={bellPress.isPressed(bell.note)} onDown={onBellDown} onUp={onBellUp} isHighlighted={nextGuidedNote === bell.note} />
+                  ))}
                 </div>
               )}
-              {activeTab === 'xylophone' && <XylophoneInstrument onPlayNote={handleBellDown} onNoteUp={handleBellUp} pressedKeys={pressedBells} highlightedNote={nextGuidedNote} />}
-              {activeTab === 'piano' && <PianoInstrument onPlayNote={handleBellDown} onNoteUp={handleBellUp} pressedKeys={pressedBells} highlightedNote={nextGuidedNote} />}
+              {activeTab === 'xylophone' && <XylophoneInstrument onPlayNote={onBellDown} onNoteUp={onBellUp} pressedKeys={bellPress.pressed} highlightedNote={nextGuidedNote} />}
+              {activeTab === 'piano' && <PianoInstrument onPlayNote={onBellDown} onNoteUp={onBellUp} pressedKeys={bellPress.pressed} highlightedNote={nextGuidedNote} />}
             </motion.div>
           </>
         )}
