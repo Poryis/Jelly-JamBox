@@ -446,19 +446,19 @@ function LoopStudioPage() {
           </div>
         </div>
 
-        {/* Instruments in the scene - always visible */}
-        <div className="max-w-6xl mx-auto mt-3 flex items-end justify-between gap-2">
+        {/* Instruments in the scene - drums left, bells center, turntable right */}
+        <div className="max-w-6xl mx-auto mt-3 flex items-end justify-center gap-4">
           {/* Drum kit on left */}
           <div className="flex-shrink-0">
             <DrumKitVisual activeHits={activeHits} />
           </div>
-          {/* Turntable in center */}
+          {/* Bells bottom center */}
+          <div className="flex-shrink-0 mb-2">
+            <BellsVisual activeNotes={activeBellNotes} />
+          </div>
+          {/* Turntable on right */}
           <div className="flex-shrink-0">
             <TurntableVisual activeHits={activeHits} />
-          </div>
-          {/* Bells on right */}
-          <div className="flex-shrink-0">
-            <BellsVisual activeNotes={activeBellNotes} />
           </div>
         </div>
       </main>

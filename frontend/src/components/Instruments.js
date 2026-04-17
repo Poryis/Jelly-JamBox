@@ -92,10 +92,10 @@ export function DrumKitVisual({ activeHits }) {
         style={{ left: '55px', bottom: '125px', height: '110px', zIndex: 1 }}
         animate={activeHits?.has('crash') ? { rotate: [0, -4, 0] } : {}} transition={{ duration: 0.12 }} />
 
-      {/* BACK: Ride */}
+      {/* BACK: Ride - scaled up, moved down and slightly right */}
       <motion.img src={activeHits?.has('ride') ? '/assets/drums/Ride 2.png' : '/assets/drums/Ride 1.png'}
         alt="Ride" className="absolute object-contain"
-        style={{ left: '235px', bottom: '110px', height: '120px', zIndex: 1 }}
+        style={{ left: '245px', bottom: '95px', height: '140px', zIndex: 1 }}
         animate={activeHits?.has('ride') ? { rotate: [0, 3, 0] } : {}} transition={{ duration: 0.12 }} />
 
       {/* Hi-Hat */}
