@@ -90,14 +90,14 @@ function HomePage() {
         ))}
       </div>
 
-      {/* Characters - all four across the bottom */}
+      {/* Characters - all four across the bottom, same size */}
       <motion.div 
         className="fixed bottom-2 left-4 hidden lg:block"
         initial={{ x: -100, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ delay: 0.8 }}
       >
-        <motion.img src="/assets/characters/finn-danger.png" alt="Finn Danger" className="w-24 h-auto"
+        <motion.img src="/assets/characters/finn-danger.png" alt="Finn Danger" className="w-24 h-28 object-contain"
           animate={{ y: [0, -12, 0] }} transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }} />
       </motion.div>
 
@@ -107,7 +107,7 @@ function HomePage() {
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 1.0 }}
       >
-        <motion.img src="/assets/characters/chunk.png" alt="Chunk" className="w-20 h-auto"
+        <motion.img src="/assets/characters/chunk.png" alt="Chunk" className="w-24 h-28 object-contain"
           animate={{ y: [0, -10, 0] }} transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut', delay: 0.3 }} />
       </motion.div>
 
@@ -117,7 +117,7 @@ function HomePage() {
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 1.2 }}
       >
-        <motion.img src="/assets/characters/jazzy.png" alt="Jazzy" className="w-20 h-auto"
+        <motion.img src="/assets/characters/jazzy.png" alt="Jazzy" className="w-24 h-28 object-contain"
           animate={{ y: [0, -10, 0] }} transition={{ repeat: Infinity, duration: 2.8, ease: 'easeInOut', delay: 0.6 }} />
       </motion.div>
 
@@ -127,7 +127,7 @@ function HomePage() {
         animate={{ x: 0, opacity: 1 }}
         transition={{ delay: 1 }}
       >
-        <motion.img src="/assets/characters/charlie-polliwog.png" alt="Charlie the Polliwog" className="w-24 h-auto"
+        <motion.img src="/assets/characters/charlie-polliwog.png" alt="Charlie the Polliwog" className="w-24 h-28 object-contain"
           animate={{ y: [0, -12, 0] }} transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut', delay: 0.5 }} />
       </motion.div>
     </div>

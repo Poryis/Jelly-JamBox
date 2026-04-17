@@ -23,8 +23,8 @@
   --jma-pink: #FF2D55;
   --jma-bg: #E0F7FA;
   --jma-dark: #0A2540;
-  --font-display: 'Comic Kings', 'Fredoka', cursive;
-  --font-body: 'Fredoka', 'Comic Kings', cursive;
+  --font-display: 'Fredoka', cursive;
+  --font-body: 'Fredoka', cursive;
 }
 
 * {

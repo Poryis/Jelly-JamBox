@@ -144,7 +144,7 @@ function FreePlayPage() {
         <motion.img
           src="/assets/characters/finn-danger.png"
           alt="Finn Danger"
-          className="w-28 h-auto"
+          className="w-24 h-28 object-contain"
           animate={{ y: [0, -10, 0] }}
           transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }}
         />

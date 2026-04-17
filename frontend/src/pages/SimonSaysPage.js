@@ -225,7 +225,7 @@ function SimonSaysPage({ score, setScore, gameStats, setGameStats, resetGame }) 
           <motion.img
             src="/assets/characters/charlie-polliwog.png"
             alt="Charlie the Polliwog"
-            className="w-28 h-auto"
+            className="w-24 h-28 object-contain"
             animate={{ y: [0, -10, 0] }}
             transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }}
           />
