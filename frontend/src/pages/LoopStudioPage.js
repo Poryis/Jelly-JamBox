@@ -6,6 +6,7 @@ import { BELLS } from '../components/JellyBells';
 import { GameHeader } from '../components/GameUI';
 import { PageCharacters } from '../components/PageCharacters';
 import { FullscreenButton } from '../components/FullscreenButton';
+import { DrumKitVisual } from '../components/Instruments';
 import useAudio from '../hooks/useAudio';
 
 const DEFAULT_BPM = 100;
@@ -118,6 +119,7 @@ function LoopStudioPage() {
   const [activeTracks, setActiveTracks] = useState(['drum_kick', 'drum_snare', 'drum_hihat', 'bells_C', 'bells_E', 'bells_G']);
   const [grid, setGrid] = useState({});
   const [mutedTracks, setMutedTracks] = useState(new Set());
+  const [activeHits, setActiveHits] = useState(new Set());
 
   const intervalRef = useRef(null);
   const gridRef = useRef(grid);
@@ -164,14 +166,21 @@ function LoopStudioPage() {
   const playStep = useCallback((step) => {
     const currentGrid = gridRef.current;
     const muted = mutedRef.current;
+    const hits = new Set();
     Object.entries(currentGrid).forEach(([trackId, steps]) => {
       if (muted.has(trackId)) return;
       if (steps[step]) {
         const preset = TRACK_PRESETS.find(p => p.id === trackId);
         if (preset?.type === 'bell') playBellNote(preset.note);
-        else if (preset?.type === 'drum' || preset?.type === 'scratch') playDrumSound(preset.note);
+        else if (preset?.type === 'drum' || preset?.type === 'scratch') {
+          playDrumSound(preset.note);
+          hits.add(preset.note);
+        }
       }
     });
+    setActiveHits(hits);
+    // Clear hits after a short delay for visual
+    setTimeout(() => setActiveHits(new Set()), 100);
   }, [playBellNote, playDrumSound]);
 
   const togglePlay = useCallback(() => {
@@ -431,6 +440,15 @@ function LoopStudioPage() {
             )}
           </div>
         </div>
+
+        {/* Drum Kit Visual - shows animated drums */}
+        {isPlaying && (
+          <div className="max-w-6xl mx-auto mt-4">
+            <div className="game-card p-4 overflow-hidden">
+              <DrumKitVisual activeHits={activeHits} />
+            </div>
+          </div>
+        )}
       </main>
       <PageCharacters page="loop-studio" />
     </div>

@@ -260,7 +260,7 @@ function EarTrainerPage() {
                   whileTap={isCorrect === null ? { scale: 0.95 } : {}}
                   style={{ background: 'transparent', border: 'none', padding: 0, cursor: isCorrect === null ? 'pointer' : 'default' }}
                 >
-                  <img src={bell.image1} alt={bell.solfege} className="w-20 h-24 md:w-28 md:h-32 object-contain pointer-events-none" draggable={false} />
+                  <img src={bell.image1} alt={bell.solfege} className="w-24 h-28 md:w-32 md:h-36 object-contain pointer-events-none" draggable={false} />
                   <div className="absolute -top-2 -right-1 w-6 h-6 rounded-full bg-white border-2 border-[var(--jma-dark)] flex items-center justify-center text-xs font-bold" style={{ color: bell.color }}>{bell.key}</div>
                 </motion.button>
                 <div className="bell-note-label text-center">

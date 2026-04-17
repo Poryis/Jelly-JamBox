@@ -60,7 +60,7 @@ function JellyBell({ bell, onPlay, isHighlighted, showNotation, isPressed }) {
         <img
           src={pressed ? bell.image2 : bell.image1}
           alt={`${bell.solfege} bell`}
-          className="w-20 h-24 md:w-28 md:h-32 object-contain pointer-events-none"
+          className="w-24 h-28 md:w-32 md:h-36 object-contain pointer-events-none"
           draggable={false}
         />
 

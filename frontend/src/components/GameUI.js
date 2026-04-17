@@ -25,7 +25,7 @@ function GameHeader({ title, score, streak, showHomeButton = true }) {
         {title && (
           <motion.h1 
             className="text-xl md:text-2xl font-bold text-center font-display"
-            style={{ color: 'var(--jma-dark)' }}
+            style={{ color: 'white', textShadow: '2px 2px 4px rgba(0,0,0,0.5), 0 0 8px rgba(0,0,0,0.3)' }}
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
           >

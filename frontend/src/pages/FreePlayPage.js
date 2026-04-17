@@ -369,7 +369,7 @@ function FreePlayPage() {
                       transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                       style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', touchAction: 'manipulation' }}>
                       <img src={isPressed ? bell.image2 : bell.image1} alt={bell.solfege}
-                        className="w-20 h-24 md:w-28 md:h-32 object-contain pointer-events-none" draggable={false} />
+                        className="w-24 h-28 md:w-32 md:h-36 object-contain pointer-events-none" draggable={false} />
                       <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-white border-2 border-[var(--jma-dark)] flex items-center justify-center text-xs font-bold"
                         style={{ color: bell.color }}>{bell.key}</div>
                       {isHighlighted && (
@@ -390,8 +390,8 @@ function FreePlayPage() {
           )}
         </motion.div>
 
-        <motion.div className="mt-4 max-w-md text-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
-          <p className="text-sm md:text-base" style={{ color: 'var(--jma-dark)' }}>
+        <motion.div className="mt-4 max-w-md text-center game-card px-4 py-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
+          <p className="text-sm md:text-base font-medium" style={{ color: 'var(--jma-dark)' }}>
             <span className="font-bold">Music Tip:</span>{' '}
             {guidedMode ? `Play the highlighted note! Next: ${noteToSolfege[nextGuidedNote] || '?'}` : 'The notes go up like stairs - Do, Re, Mi, Fa, So, La, Ti, Do!'}
           </p>
