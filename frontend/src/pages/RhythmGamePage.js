@@ -1,37 +1,19 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Play, Pause, RotateCcw } from 'lucide-react';
+import { Play, Trophy, ChevronLeft, ChevronRight, Zap } from 'lucide-react';
 import { BELLS, KEY_TO_NOTE } from '../components/JellyBells';
 import { GameHeader, FeedbackPopup, ProgressBar } from '../components/GameUI';
 import useAudio from '../hooks/useAudio';
+import { SONG_LIBRARY, SPEED_SETTINGS, getSongsByCategory } from '../data/songs';
+import { getHighScore, saveHighScore, getTopScores } from '../hooks/useScores';
 
-// Simple songs for young children
-const SONGS = {
-  easy: {
-    name: 'Hot Cross Buns',
-    notes: ['E', 'D', 'C', 'E', 'D', 'C', 'C', 'C', 'C', 'C', 'D', 'D', 'D', 'D', 'E', 'D', 'C'],
-    tempo: 800 // ms per note
-  },
-  medium: {
-    name: 'Mary Had a Little Lamb',
-    notes: ['E', 'D', 'C', 'D', 'E', 'E', 'E', 'D', 'D', 'D', 'E', 'G', 'G', 'E', 'D', 'C', 'D', 'E', 'E', 'E', 'E', 'D', 'D', 'E', 'D', 'C'],
-    tempo: 600
-  },
-  hard: {
-    name: 'Twinkle Twinkle',
-    notes: ['C', 'C', 'G', 'G', 'A', 'A', 'G', 'F', 'F', 'E', 'E', 'D', 'D', 'C', 'G', 'G', 'F', 'F', 'E', 'E', 'D', 'G', 'G', 'F', 'F', 'E', 'E', 'D', 'C', 'C', 'G', 'G', 'A', 'A', 'G', 'F', 'F', 'E', 'E', 'D', 'D', 'C'],
-    tempo: 500
-  }
-};
-
-// Note order from LOW to HIGH for lane positioning
 const NOTE_ORDER = ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'High C'];
 
-function FallingNote({ note, onMiss, speed, laneIndex, totalLanes }) {
+function FallingNote({ note, laneIndex, totalLanes, speed }) {
   const bell = BELLS.find(b => b.note === note);
   const laneWidth = 100 / totalLanes;
-  
+
   return (
     <motion.div
       className="note-block"
@@ -44,8 +26,6 @@ function FallingNote({ note, onMiss, speed, laneIndex, totalLanes }) {
       initial={{ top: -60 }}
       animate={{ top: 'calc(100% + 60px)' }}
       transition={{ duration: speed / 1000, ease: 'linear' }}
-      onAnimationComplete={onMiss}
-      data-testid={`falling-note-${note}`}
     >
       {bell?.solfege || note}
     </motion.div>
@@ -55,26 +35,40 @@ function FallingNote({ note, onMiss, speed, laneIndex, totalLanes }) {
 function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame }) {
   const navigate = useNavigate();
   const { playBellNote, playFeedbackSound, initAudioContext } = useAudio();
-  
-  const [gameState, setGameState] = useState('menu'); // menu, playing, paused, finished
-  const [difficulty, setDifficulty] = useState('easy');
+
+  const [gameState, setGameState] = useState('menu');
+  const [selectedSong, setSelectedSong] = useState(SONG_LIBRARY[0]);
+  const [speed, setSpeed] = useState('normal');
+  const [showHighScores, setShowHighScores] = useState(false);
   const [fallingNotes, setFallingNotes] = useState([]);
   const [currentNoteIndex, setCurrentNoteIndex] = useState(0);
   const [feedback, setFeedback] = useState(null);
   const [pressedKeys, setPressedKeys] = useState(new Set());
-  
+  const [isNewRecord, setIsNewRecord] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState('All');
+
   const gameLoopRef = useRef(null);
   const noteIdRef = useRef(0);
+  const fallingNotesRef = useRef([]);
 
-  const currentSong = SONGS[difficulty];
-  
-  // Get unique notes used in the song, sorted from LOW to HIGH
+  const speedConfig = SPEED_SETTINGS[speed];
+  const songCategories = useMemo(() => getSongsByCategory(), []);
+  const categories = ['All', ...Object.keys(songCategories)];
+
+  const filteredSongs = categoryFilter === 'All'
+    ? SONG_LIBRARY
+    : SONG_LIBRARY.filter(s => s.category === categoryFilter);
+
   const activeBells = useMemo(() => {
-    const uniqueNotes = [...new Set(currentSong.notes)];
+    const uniqueNotes = [...new Set(selectedSong.notes)];
     return uniqueNotes.sort((a, b) => NOTE_ORDER.indexOf(a) - NOTE_ORDER.indexOf(b));
-  }, [currentSong.notes]);
+  }, [selectedSong.notes]);
 
-  // Start game
+  // Keep ref in sync
+  useEffect(() => {
+    fallingNotesRef.current = fallingNotes;
+  }, [fallingNotes]);
+
   const startGame = useCallback(() => {
     initAudioContext();
     resetGame();
@@ -82,42 +76,32 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
     setCurrentNoteIndex(0);
     setFallingNotes([]);
     noteIdRef.current = 0;
+    setIsNewRecord(false);
   }, [initAudioContext, resetGame]);
 
-  // Handle bell tap (mouse/touch/keyboard)
   const handlePlayNote = useCallback((tappedNote) => {
     playBellNote(tappedNote);
-
-    // Check if there's a matching note in the target zone
-    const matchingNote = fallingNotes.find(n => 
-      n.note === tappedNote && !n.hit
-    );
+    const currentNotes = fallingNotesRef.current;
+    const matchingNote = currentNotes.find(n => n.note === tappedNote && !n.hit);
 
     if (matchingNote) {
-      // Hit! Calculate score based on timing
-      const points = 100;
-      setScore(prev => prev + points);
+      setScore(prev => prev + 100);
       setGameStats(prev => ({
         ...prev,
         perfect: prev.perfect + 1,
         streak: prev.streak + 1,
         maxStreak: Math.max(prev.maxStreak, prev.streak + 1)
       }));
-      
       setFeedback('perfect');
       playFeedbackSound('perfect');
-      
-      // Remove the hit note
       setFallingNotes(prev => prev.filter(n => n.id !== matchingNote.id));
     }
+    setTimeout(() => setFeedback(null), 400);
+  }, [playBellNote, playFeedbackSound, setScore, setGameStats]);
 
-    setTimeout(() => setFeedback(null), 500);
-  }, [fallingNotes, playBellNote, playFeedbackSound, setScore, setGameStats]);
-
-  // Keyboard controls for rhythm game (1-8 keys)
+  // Keyboard controls
   useEffect(() => {
     if (gameState !== 'playing') return;
-
     const handleKeyDown = (e) => {
       const note = KEY_TO_NOTE[e.key];
       if (note && activeBells.includes(note) && !pressedKeys.has(e.key)) {
@@ -125,254 +109,255 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
         handlePlayNote(note);
       }
     };
-
     const handleKeyUp = (e) => {
       if (KEY_TO_NOTE[e.key]) {
-        setPressedKeys(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(e.key);
-          return newSet;
-        });
+        setPressedKeys(prev => { const s = new Set(prev); s.delete(e.key); return s; });
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
+    return () => { window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('keyup', handleKeyUp); };
   }, [gameState, activeBells, handlePlayNote, pressedKeys]);
 
   // Spawn notes
   useEffect(() => {
     if (gameState !== 'playing') return;
-
     const spawnNote = () => {
-      if (currentNoteIndex >= currentSong.notes.length) {
-        // Song finished
+      if (currentNoteIndex >= selectedSong.notes.length) {
         setTimeout(() => {
           setGameState('finished');
-          navigate('/results');
         }, 2000);
         return;
       }
-
-      const note = currentSong.notes[currentNoteIndex];
+      const note = selectedSong.notes[currentNoteIndex];
       const laneIndex = activeBells.indexOf(note);
-      
-      setFallingNotes(prev => [
-        ...prev,
-        {
-          id: noteIdRef.current++,
-          note,
-          laneIndex,
-          hit: false
-        }
-      ]);
+      setFallingNotes(prev => [...prev, { id: noteIdRef.current++, note, laneIndex, hit: false }]);
       setCurrentNoteIndex(prev => prev + 1);
     };
+    gameLoopRef.current = setInterval(spawnNote, speedConfig.ms);
+    return () => { if (gameLoopRef.current) clearInterval(gameLoopRef.current); };
+  }, [gameState, currentNoteIndex, selectedSong, activeBells, speedConfig.ms]);
 
-    gameLoopRef.current = setInterval(spawnNote, currentSong.tempo);
-
-    return () => {
-      if (gameLoopRef.current) {
-        clearInterval(gameLoopRef.current);
-      }
-    };
-  }, [gameState, currentNoteIndex, currentSong, activeBells, navigate]);
-
-  // Handle missed note
+  // Handle missed notes
   const handleNoteMiss = useCallback((noteId) => {
     setFallingNotes(prev => {
       const note = prev.find(n => n.id === noteId);
       if (note && !note.hit) {
-        setGameStats(p => ({
-          ...p,
-          miss: p.miss + 1,
-          streak: 0
-        }));
+        setGameStats(p => ({ ...p, miss: p.miss + 1, streak: 0 }));
         setFeedback('miss');
         playFeedbackSound('miss');
-        setTimeout(() => setFeedback(null), 500);
+        setTimeout(() => setFeedback(null), 400);
       }
       return prev.filter(n => n.id !== noteId);
     });
   }, [playFeedbackSound, setGameStats]);
 
-  // Get key number for a note
-  const getNoteKey = (note) => {
-    const bell = BELLS.find(b => b.note === note);
-    return bell?.key || '';
-  };
+  // Save score when game ends
+  useEffect(() => {
+    if (gameState !== 'finished') return;
+    const total = gameStats.perfect + gameStats.miss;
+    const accuracy = total > 0 ? Math.round((gameStats.perfect / total) * 100) : 0;
+    const newRecord = saveHighScore(selectedSong.id, speed, score, {
+      accuracy,
+      maxStreak: gameStats.maxStreak
+    });
+    setIsNewRecord(newRecord);
+  }, [gameState, selectedSong.id, speed, score, gameStats]);
 
-  // Difficulty selection screen
-  if (gameState === 'menu') {
+  // FINISHED screen
+  if (gameState === 'finished') {
+    const total = gameStats.perfect + gameStats.miss;
+    const accuracy = total > 0 ? Math.round((gameStats.perfect / total) * 100) : 0;
+    let rating, ratingColor;
+    if (accuracy >= 90) { rating = 'SUPERSTAR!'; ratingColor = '#FFD700'; }
+    else if (accuracy >= 70) { rating = 'GREAT JOB!'; ratingColor = '#4CD964'; }
+    else if (accuracy >= 50) { rating = 'GOOD TRY!'; ratingColor = '#4285F4'; }
+    else { rating = 'KEEP GOING!'; ratingColor = '#FF9500'; }
+
     return (
-      <div className="min-h-screen sunburst-bg flex flex-col items-center justify-center p-4" data-testid="rhythm-game-menu">
+      <div className="min-h-screen sunburst-bg flex flex-col items-center justify-center p-4" data-testid="rhythm-results">
+        <motion.div initial={{ scale: 0, rotate: -180 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: 'spring' }} className="mb-4">
+          <div className="w-24 h-24 rounded-full flex items-center justify-center border-4 border-[var(--jma-dark)]" style={{ backgroundColor: ratingColor }}>
+            <Trophy className="w-12 h-12 text-white" />
+          </div>
+        </motion.div>
+        {isNewRecord && (
+          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="bg-[var(--jma-yellow)] text-[var(--jma-dark)] px-4 py-2 rounded-full border-4 border-[var(--jma-dark)] mb-4 font-display text-xl font-bold">
+            NEW HIGH SCORE!
+          </motion.div>
+        )}
+        <h1 className="text-4xl md:text-5xl font-black mb-2 font-display" style={{ color: ratingColor, textShadow: '3px 3px 0 var(--jma-dark)' }}>{rating}</h1>
+        <p className="text-lg mb-4 font-display" style={{ color: 'var(--jma-dark)' }}>{selectedSong.name} - {speedConfig.label}</p>
+        <div className="game-card p-6 w-full max-w-sm mb-6">
+          <div className="text-center mb-4">
+            <p className="text-sm uppercase opacity-70">Score</p>
+            <p className="text-5xl font-black font-display" style={{ color: 'var(--jma-dark)' }}>{score.toLocaleString()}</p>
+          </div>
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div className="p-2 rounded-xl" style={{ backgroundColor: '#4CD96420' }}>
+              <p className="text-xl font-bold" style={{ color: '#4CD964' }}>{gameStats.perfect}</p>
+              <p className="text-xs">Hit</p>
+            </div>
+            <div className="p-2 rounded-xl" style={{ backgroundColor: '#FF3B3020' }}>
+              <p className="text-xl font-bold" style={{ color: '#FF3B30' }}>{gameStats.miss}</p>
+              <p className="text-xs">Miss</p>
+            </div>
+            <div className="p-2 rounded-xl" style={{ backgroundColor: '#FF950020' }}>
+              <p className="text-xl font-bold" style={{ color: '#FF9500' }}>{gameStats.maxStreak}x</p>
+              <p className="text-xs">Streak</p>
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <motion.button data-testid="play-again-button" className="chunky-btn bg-[var(--jma-green)] text-white px-6 py-3 font-bold" onClick={startGame} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            Play Again
+          </motion.button>
+          <motion.button className="chunky-btn bg-white px-6 py-3 font-bold" style={{ color: 'var(--jma-dark)' }} onClick={() => setGameState('menu')} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            Pick Song
+          </motion.button>
+          <motion.button data-testid="home-button-results" className="chunky-btn bg-white px-6 py-3 font-bold" style={{ color: 'var(--jma-dark)' }} onClick={() => navigate('/')} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            Home
+          </motion.button>
+        </div>
+      </div>
+    );
+  }
+
+  // MENU screen
+  if (gameState === 'menu') {
+    const topScores = getTopScores(5);
+    return (
+      <div className="min-h-screen sunburst-bg flex flex-col items-center p-4 pt-20 pb-8" data-testid="rhythm-game-menu">
         <GameHeader showHomeButton={true} />
-        
-        <motion.h1
-          className="text-3xl md:text-5xl font-black mb-8 text-center"
-          style={{ color: 'var(--jma-dark)', fontFamily: "'Fredoka', cursive" }}
-          initial={{ y: -30, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-        >
+        <motion.h1 className="text-3xl md:text-5xl font-black mb-2 text-center font-display" style={{ color: 'var(--jma-dark)' }} initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
           Rhythm Game
         </motion.h1>
+        <p className="text-sm mb-2 bg-white rounded-xl border-2 border-[var(--jma-dark)] px-4 py-1" style={{ color: 'var(--jma-dark)' }}>
+          <strong>Controls:</strong> Keys 1-8, click, or tap
+        </p>
 
-        <motion.p
-          className="text-lg mb-4 text-center max-w-md"
-          style={{ color: 'var(--jma-dark)' }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-        >
-          Hit the Jelly Bells when the notes reach the bottom!
-        </motion.p>
+        {/* High Scores Toggle */}
+        <button data-testid="toggle-high-scores" className="text-sm font-bold mb-4 underline" style={{ color: 'var(--jma-blue)' }} onClick={() => setShowHighScores(!showHighScores)}>
+          {showHighScores ? 'Hide' : 'Show'} High Scores <Trophy className="inline w-4 h-4" />
+        </button>
 
-        <motion.p
-          className="text-base mb-8 text-center max-w-md px-4 py-2 bg-white rounded-xl border-2 border-[var(--jma-dark)]"
-          style={{ color: 'var(--jma-dark)' }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-        >
-          <strong>Controls:</strong> Use keyboard keys 1-8, click, or tap!
-        </motion.p>
+        {showHighScores && topScores.length > 0 && (
+          <motion.div className="game-card p-4 mb-4 w-full max-w-lg" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}>
+            <h3 className="font-bold text-center mb-2 font-display">Top Scores</h3>
+            <div className="space-y-1">
+              {topScores.map((s, i) => {
+                const song = SONG_LIBRARY.find(sl => sl.id === s.songId);
+                return (
+                  <div key={i} className="flex justify-between text-sm px-2 py-1 rounded bg-[var(--jma-bg)]">
+                    <span className="font-bold">{i+1}. {song?.name || s.songId}</span>
+                    <span>{s.score.toLocaleString()} ({s.speed})</span>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
 
-        <div className="grid gap-4 w-full max-w-md">
-          {Object.entries(SONGS).map(([key, song], idx) => (
+        {/* Speed Selector */}
+        <div className="flex gap-2 mb-4">
+          {Object.entries(SPEED_SETTINGS).map(([key, cfg]) => (
             <motion.button
               key={key}
-              data-testid={`difficulty-${key}`}
-              className={`level-card p-4 text-left ${difficulty === key ? 'ring-4 ring-[var(--jma-blue)]' : ''}`}
-              onClick={() => setDifficulty(key)}
-              initial={{ x: -50, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ delay: 0.1 * idx }}
-              whileHover={{ scale: 1.02 }}
+              data-testid={`speed-${key}`}
+              className={`chunky-btn px-4 py-2 text-sm font-bold ${speed === key ? 'ring-4 ring-[var(--jma-yellow)]' : ''}`}
+              style={{ backgroundColor: cfg.color, color: key === 'normal' ? 'var(--jma-dark)' : 'white' }}
+              onClick={() => setSpeed(key)}
+              whileTap={{ scale: 0.95 }}
             >
-              <h3 className="text-xl font-bold" style={{ fontFamily: "'Fredoka', cursive" }}>
-                {key.charAt(0).toUpperCase() + key.slice(1)}
-              </h3>
-              <p className="text-sm opacity-70">{song.name}</p>
-              <p className="text-xs mt-1 opacity-50">{song.notes.length} notes</p>
+              <Zap className="inline w-4 h-4 mr-1" />{cfg.label}
             </motion.button>
           ))}
         </div>
 
-        <motion.button
-          data-testid="start-game-button"
-          className="chunky-btn bg-[var(--jma-green)] text-white px-8 py-4 mt-8 flex items-center gap-3"
-          onClick={startGame}
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: 0.5, type: 'spring' }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <Play className="w-6 h-6" />
-          <span className="text-xl font-bold">START!</span>
+        {/* Category filter */}
+        <div className="flex gap-2 mb-3 flex-wrap justify-center">
+          {categories.map(cat => (
+            <button key={cat} className={`px-3 py-1 rounded-full text-sm font-bold border-2 border-[var(--jma-dark)] transition-all ${categoryFilter === cat ? 'bg-[var(--jma-dark)] text-white' : 'bg-white'}`} onClick={() => setCategoryFilter(cat)}>
+              {cat}
+            </button>
+          ))}
+        </div>
+
+        {/* Song grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 w-full max-w-2xl mb-4 max-h-[40vh] overflow-y-auto pr-1">
+          {filteredSongs.map((song) => {
+            const highScore = getHighScore(song.id, speed);
+            return (
+              <motion.button
+                key={song.id}
+                data-testid={`song-${song.id}`}
+                className={`level-card p-3 text-left flex items-center gap-3 ${selectedSong.id === song.id ? 'ring-4 ring-[var(--jma-blue)]' : ''}`}
+                onClick={() => setSelectedSong(song)}
+                whileHover={{ scale: 1.02 }}
+              >
+                <div className="flex-1">
+                  <h3 className="text-base font-bold font-display">{song.name}</h3>
+                  <p className="text-xs opacity-60">{song.category} - {song.notes.length} notes</p>
+                </div>
+                {highScore && (
+                  <div className="text-right">
+                    <p className="text-xs font-bold" style={{ color: 'var(--jma-orange)' }}>
+                      <Trophy className="inline w-3 h-3" /> {highScore.score}
+                    </p>
+                  </div>
+                )}
+              </motion.button>
+            );
+          })}
+        </div>
+
+        <motion.button data-testid="start-game-button" className="chunky-btn bg-[var(--jma-green)] text-white px-8 py-3 flex items-center gap-3" onClick={startGame} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <Play className="w-6 h-6" /><span className="text-xl font-bold font-display">START!</span>
         </motion.button>
       </div>
     );
   }
 
-  // Game playing screen
+  // PLAYING screen
   return (
     <div className="min-h-screen sunburst-cool flex flex-col" data-testid="rhythm-game-playing">
-      <GameHeader 
-        title={currentSong.name}
-        score={score} 
-        streak={gameStats.streak}
-        showHomeButton={true} 
-      />
-
-      {/* Progress bar */}
+      <GameHeader title={selectedSong.name} score={score} streak={gameStats.streak} showHomeButton={true} />
       <div className="fixed top-16 left-0 right-0 px-4 py-2 z-40">
-        <ProgressBar 
-          current={currentNoteIndex} 
-          total={currentSong.notes.length}
-          color="var(--jma-green)"
-        />
+        <ProgressBar current={currentNoteIndex} total={selectedSong.notes.length} color={speedConfig.color} />
       </div>
-
-      {/* Feedback popup */}
-      <AnimatePresence>
-        {feedback && (
-          <FeedbackPopup feedback={feedback} onComplete={() => setFeedback(null)} />
-        )}
-      </AnimatePresence>
-
-      {/* Game area */}
+      <AnimatePresence>{feedback && <FeedbackPopup feedback={feedback} />}</AnimatePresence>
       <main className="flex-1 flex flex-col pt-24 pb-4 px-2 md:px-4">
         <div className="game-board flex-1 relative overflow-hidden">
-          {/* Lanes - ordered from LOW (left) to HIGH (right) */}
           <div className="rhythm-lanes">
-            {activeBells.map((note, idx) => {
+            {activeBells.map((note) => {
               const bell = BELLS.find(b => b.note === note);
               return (
-                <div 
-                  key={note}
-                  className="rhythm-lane"
-                  style={{ 
-                    backgroundColor: `${bell?.color}15`
-                  }}
-                >
-                  {/* Target zone indicator */}
+                <div key={note} className="rhythm-lane" style={{ backgroundColor: `${bell?.color}15` }}>
                   <div className="lane-target" />
                 </div>
               );
             })}
-
-            {/* Falling notes */}
             <AnimatePresence>
               {fallingNotes.map(note => (
-                <FallingNote
-                  key={note.id}
-                  note={note.note}
-                  laneIndex={note.laneIndex}
-                  totalLanes={activeBells.length}
-                  speed={2500}
-                  onMiss={() => handleNoteMiss(note.id)}
-                />
+                <FallingNote key={note.id} note={note.note} laneIndex={note.laneIndex} totalLanes={activeBells.length} speed={speedConfig.fallSpeed} />
               ))}
             </AnimatePresence>
           </div>
-
-          {/* Bell controls at bottom - ordered LOW to HIGH */}
           <div className="absolute bottom-0 left-0 right-0 bg-white border-t-4 border-[var(--jma-dark)] p-2">
             <div className="flex justify-center gap-2">
               {activeBells.map(note => {
                 const bell = BELLS.find(b => b.note === note);
-                const isPressed = pressedKeys.has(bell?.key);
+                const isKeyPressed = pressedKeys.has(bell?.key);
                 return (
-                  <motion.button
-                    key={note}
-                    data-testid={`game-bell-${note}`}
+                  <motion.button key={note} data-testid={`game-bell-${note}`}
                     className="relative w-12 h-14 md:w-16 md:h-18 rounded-xl border-3 border-[var(--jma-dark)] flex items-center justify-center font-bold text-white text-sm md:text-base"
-                    style={{ 
-                      backgroundColor: bell?.color,
-                      transform: isPressed ? 'scale(0.95)' : 'scale(1)'
-                    }}
+                    style={{ backgroundColor: bell?.color, transform: isKeyPressed ? 'scale(0.92)' : 'scale(1)' }}
                     onClick={() => handlePlayNote(note)}
-                    onMouseDown={() => handlePlayNote(note)}
-                    onTouchStart={(e) => {
-                      e.preventDefault();
-                      handlePlayNote(note);
-                    }}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
+                    onTouchStart={(e) => { e.preventDefault(); handlePlayNote(note); }}
+                    whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
                   >
                     {bell?.solfege}
-                    {/* Key hint */}
-                    <span className="absolute -top-2 -right-1 w-5 h-5 rounded-full bg-white border border-[var(--jma-dark)] text-xs font-bold flex items-center justify-center"
-                      style={{ color: bell?.color }}
-                    >
-                      {bell?.key}
-                    </span>
+                    <span className="absolute -top-2 -right-1 w-5 h-5 rounded-full bg-white border border-[var(--jma-dark)] text-xs font-bold flex items-center justify-center" style={{ color: bell?.color }}>{bell?.key}</span>
                   </motion.button>
                 );
               })}
