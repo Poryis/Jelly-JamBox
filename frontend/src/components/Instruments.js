@@ -104,9 +104,9 @@ export function DrumKitVisual({ activeHits }) {
         style={{ left: '0px', bottom: '20px', height: '160px', zIndex: 3 }}
         animate={activeHits?.has('hihat') ? { y: [0, 3, 0] } : {}} transition={{ duration: 0.1 }} />
 
-      {/* Kick - center. Image swaps directly based on activeHits */}
+      {/* Kick - center. Idle=kICK 1, Hit=kICK 2 */}
       <img
-        src={kickHit ? '/assets/drums/kICK 1.png' : '/assets/drums/kICK 2.png'}
+        src={kickHit ? '/assets/drums/kICK 2.png' : '/assets/drums/kICK 1.png'}
         alt="Kick" className="absolute object-contain"
         style={{ left: '120px', bottom: '0px', width: '140px', zIndex: 3 }}
       />
@@ -166,13 +166,12 @@ export function TurntableVisual({ activeHits }) {
   );
 }
 
-// Bells visual for Loop Studio - bigger, with semi-transparent backdrop
+// Bells visual for Loop Studio - 2x bigger, at the very bottom
 export function BellsVisual({ activeNotes }) {
   return (
     <div className="relative">
-      {/* Semi-transparent backdrop */}
-      <div className="absolute inset-0 -inset-x-3 -inset-y-2 bg-white/40 rounded-2xl backdrop-blur-sm" />
-      <div className="flex justify-center items-end gap-2 relative z-10 p-2">
+      <div className="absolute inset-0 -inset-x-4 -inset-y-3 bg-white/40 rounded-2xl backdrop-blur-sm" />
+      <div className="flex justify-center items-end gap-2 relative z-10 p-3">
         {BELLS.map(bell => {
           const isHit = activeNotes?.has(bell.note);
           return (
@@ -180,7 +179,7 @@ export function BellsVisual({ activeNotes }) {
               src={isHit ? bell.image2 : bell.image1}
               alt={bell.solfege}
               className="object-contain"
-              style={{ width: '52px', height: '60px' }}
+              style={{ width: '100px', height: '115px' }}
               animate={isHit ? { scale: [1, 0.88, 1] } : {}}
               transition={{ duration: 0.1 }}
             />
