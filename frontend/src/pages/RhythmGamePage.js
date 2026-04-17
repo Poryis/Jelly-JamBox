@@ -5,6 +5,7 @@ import { Play, Trophy, Zap } from 'lucide-react';
 import { BELLS, KEY_TO_NOTE } from '../components/JellyBells';
 import { GameHeader, FeedbackPopup, ProgressBar } from '../components/GameUI';
 import { PageCharacters } from '../components/PageCharacters';
+import { FullscreenButton } from '../components/FullscreenButton';
 import useAudio from '../hooks/useAudio';
 import { SONG_LIBRARY, SPEED_SETTINGS, getSongsByCategory } from '../data/songs';
 import { getHighScore, saveHighScore, getTopScores } from '../hooks/useScores';

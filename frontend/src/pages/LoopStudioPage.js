@@ -5,6 +5,7 @@ import { Play, Square, Trash2, Plus, Minus, Volume2 } from 'lucide-react';
 import { BELLS } from '../components/JellyBells';
 import { GameHeader } from '../components/GameUI';
 import { PageCharacters } from '../components/PageCharacters';
+import { FullscreenButton } from '../components/FullscreenButton';
 import useAudio from '../hooks/useAudio';
 
 const DEFAULT_BPM = 100;
@@ -288,6 +289,7 @@ function LoopStudioPage() {
     <div className="min-h-screen flex flex-col" data-testid="loop-studio-page"
       style={{ backgroundImage: 'url(/assets/backgrounds/playground.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
       <GameHeader title="Loop Studio" showHomeButton={true} />
+      <FullscreenButton />
 
       <main className="flex-1 pt-20 pb-4 px-2 md:px-4 overflow-auto">
         {/* Controls Bar */}

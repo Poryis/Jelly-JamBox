@@ -5,6 +5,7 @@ import { Play, Ear, RotateCcw, Volume2, Trophy } from 'lucide-react';
 import JellyBellsRow, { BELLS } from '../components/JellyBells';
 import { GameHeader } from '../components/GameUI';
 import { PageCharacters } from '../components/PageCharacters';
+import { FullscreenButton } from '../components/FullscreenButton';
 import useAudio from '../hooks/useAudio';
 import { getEarTrainerStats, saveEarTrainerStats } from '../hooks/useScores';
 
@@ -136,6 +137,7 @@ function EarTrainerPage() {
         style={{ backgroundImage: 'url(/assets/backgrounds/beach.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}
       >
         <GameHeader showHomeButton={true} />
+        <FullscreenButton />
 
         <motion.h1 className="text-3xl md:text-5xl font-black mb-4 text-center font-display" style={{ color: 'var(--jma-dark)' }} initial={{ y: -30, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
           Ear Trainer

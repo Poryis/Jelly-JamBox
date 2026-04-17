@@ -5,6 +5,7 @@ import { Play, Eye, RotateCcw } from 'lucide-react';
 import JellyBellsRow, { BELLS, KEY_TO_NOTE } from '../components/JellyBells';
 import { GameHeader, FeedbackPopup, ProgressBar } from '../components/GameUI';
 import { PageCharacters } from '../components/PageCharacters';
+import { FullscreenButton } from '../components/FullscreenButton';
 import useAudio from '../hooks/useAudio';
 
 // Patterns for Simon Says (progressively harder)
@@ -175,6 +176,7 @@ function SimonSaysPage({ score, setScore, gameStats, setGameStats, resetGame }) 
         }}
       >
         <GameHeader showHomeButton={true} />
+        <FullscreenButton />
 
         <motion.h1
           className="text-3xl md:text-5xl font-black mb-4 text-center"

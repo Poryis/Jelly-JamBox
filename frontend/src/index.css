@@ -277,6 +277,19 @@ h1, h2, h3, h4, h5, h6 {
   .chunky-btn { min-height: 56px; min-width: 56px; }
 }
 
+/* Ultrawide screen support */
+@media (min-aspect-ratio: 21/9) {
+  .game-board, .game-card { max-width: 900px; }
+  .bell-row { max-width: 900px; margin: 0 auto; }
+}
+
+:fullscreen { background: var(--jma-bg); }
+:fullscreen .min-h-screen { min-height: 100vh; min-height: 100dvh; }
+
+@media (hover: none) and (pointer: coarse) {
+  .chunky-btn { min-height: 48px; min-width: 48px; }
+}
+
 @layer base {
   :root {
     --background: 187 71% 92%;

@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { Music, Circle, Square, Play, RotateCcw, ChevronRight, Volume2 } from 'lucide-react';
 import { BELLS, KEY_TO_NOTE } from '../components/JellyBells';
 import { GameHeader, NotationDisplay } from '../components/GameUI';
+import { XylophoneInstrument, PianoInstrument } from '../components/Instruments';
+import { FullscreenButton } from '../components/FullscreenButton';
 import useAudio from '../hooks/useAudio';
 
 // Guided songs
@@ -106,51 +108,14 @@ function CharacterReaction({ streak }) {
 }
 
 // Instrument display for each mode
+// InstrumentRow now uses shared CSS components
 function InstrumentRow({ soundMode, onPlayNote, highlightedNote, pressedKeys }) {
   if (soundMode === 'xylophone') {
-    return (
-      <div className="relative">
-        <img src="/assets/xylophone/no-bars.png" alt="Xylophone frame" className="w-full max-w-2xl mx-auto h-auto opacity-30 absolute inset-0 object-contain" />
-        <div className="flex justify-center items-end gap-1 md:gap-2 p-4 relative z-10" data-testid="xylophone-row">
-          {BELLS.map(bell => (
-            <motion.button key={bell.note} data-testid={`xylo-${bell.note.replace(' ', '-')}`}
-              className="flex flex-col items-center"
-              onPointerDown={(e) => { e.preventDefault(); onPlayNote(bell.note); }}
-              animate={{ scale: pressedKeys.has(bell.key) ? 0.92 : 1 }}
-              transition={{ type: 'spring', stiffness: 500 }}
-              whileHover={{ scale: 1.05 }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', touchAction: 'manipulation' }}>
-              <img src={XYLO_IMAGES[bell.note]} alt={bell.solfege} className="w-10 h-20 md:w-14 md:h-28 object-contain" draggable={false} />
-              <span className="text-xs md:text-sm font-bold mt-1" style={{ color: bell.color }}>{bell.solfege}</span>
-              <div className="w-5 h-5 rounded-full bg-white border border-[var(--jma-dark)] text-[9px] font-bold flex items-center justify-center mt-0.5" style={{ color: bell.color }}>{bell.key}</div>
-            </motion.button>
-          ))}
-        </div>
-      </div>
-    );
+    return <XylophoneInstrument onPlayNote={onPlayNote} pressedKeys={pressedKeys} highlightedNote={highlightedNote} />;
   }
-
   if (soundMode === 'piano') {
-    return (
-      <div className="flex justify-center items-end gap-0 p-4" data-testid="piano-row">
-        {BELLS.map(bell => (
-          <motion.button key={bell.note} data-testid={`piano-${bell.note.replace(' ', '-')}`}
-            className="flex flex-col items-center"
-            onPointerDown={(e) => { e.preventDefault(); onPlayNote(bell.note); }}
-            animate={{ scale: pressedKeys.has(bell.key) ? 0.95 : 1 }}
-            transition={{ type: 'spring', stiffness: 500 }}
-            whileHover={{ scale: 1.03 }}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', touchAction: 'manipulation' }}>
-            <img src={PIANO_IMAGES[bell.note]} alt={bell.solfege} className="w-12 h-24 md:w-16 md:h-32 object-contain" draggable={false} />
-            <span className="text-xs md:text-sm font-bold mt-1" style={{ color: bell.color }}>{bell.solfege}</span>
-            <div className="w-5 h-5 rounded-full bg-white border border-[var(--jma-dark)] text-[9px] font-bold flex items-center justify-center mt-0.5" style={{ color: bell.color }}>{bell.key}</div>
-          </motion.button>
-        ))}
-      </div>
-    );
+    return <PianoInstrument onPlayNote={onPlayNote} pressedKeys={pressedKeys} highlightedNote={highlightedNote} />;
   }
-
-  // Default: Jelly Bells (use the existing row but handle via parent)
   return null;
 }
 
@@ -307,6 +272,7 @@ function FreePlayPage() {
     <div className="min-h-screen flex flex-col" data-testid="free-play-page"
       style={{ backgroundImage: 'url(/assets/backgrounds/clubhouse.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
       <GameHeader title="Free Play" showHomeButton={true} />
+      <FullscreenButton />
 
       <AnimatePresence>
         {particles.map(p => <ParticleBurst key={p.id} x={p.x} y={p.y} color={p.color} />)}
