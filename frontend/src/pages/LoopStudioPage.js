@@ -6,7 +6,7 @@ import { BELLS } from '../components/JellyBells';
 import { GameHeader } from '../components/GameUI';
 import { PageCharacters } from '../components/PageCharacters';
 import { FullscreenButton } from '../components/FullscreenButton';
-import { DrumKitVisual, BellsVisual } from '../components/Instruments';
+import { DrumKitVisual, BellsVisual, TurntableVisual } from '../components/Instruments';
 import useAudio from '../hooks/useAudio';
 
 const DEFAULT_BPM = 100;
@@ -447,13 +447,17 @@ function LoopStudioPage() {
         </div>
 
         {/* Instruments in the scene - always visible */}
-        <div className="max-w-6xl mx-auto mt-3 flex items-end justify-between gap-4">
+        <div className="max-w-6xl mx-auto mt-3 flex items-end justify-between gap-2">
           {/* Drum kit on left */}
-          <div className="flex-1 max-w-md">
+          <div className="flex-shrink-0">
             <DrumKitVisual activeHits={activeHits} />
           </div>
+          {/* Turntable in center */}
+          <div className="flex-shrink-0">
+            <TurntableVisual activeHits={activeHits} />
+          </div>
           {/* Bells on right */}
-          <div className="flex-1 max-w-sm">
+          <div className="flex-shrink-0">
             <BellsVisual activeNotes={activeBellNotes} />
           </div>
         </div>
