@@ -4,6 +4,7 @@ import { Music, Drum, Brain, Layers, Ear } from 'lucide-react';
 
 // SVG cartoony music notes - colorful, thick-stroked, fun
 const NOTES = [
+  // Top edges
   { type: 'quarter', color: '#FF3B30', x: '3%', y: '5%', size: 28, delay: 0, dur: 4.2 },
   { type: 'eighth', color: '#FF9500', x: '92%', y: '8%', size: 32, delay: 0.3, dur: 3.5 },
   { type: 'quarter', color: '#FFCC00', x: '10%', y: '25%', size: 24, delay: 0.7, dur: 3.8 },
@@ -14,13 +15,26 @@ const NOTES = [
   { type: 'eighth', color: '#34A853', x: '90%', y: '75%', size: 34, delay: 0.2, dur: 3.9 },
   { type: 'quarter', color: '#FF9500', x: '15%', y: '88%', size: 26, delay: 0.8, dur: 4.1 },
   { type: 'eighth', color: '#4285F4', x: '85%', y: '90%', size: 24, delay: 1.5, dur: 3.3 },
-  // Inner notes
+  // Inner sides
   { type: 'quarter', color: '#FFCC00', x: '20%', y: '12%', size: 20, delay: 1.0, dur: 3.7 },
   { type: 'eighth', color: '#FF3B30', x: '78%', y: '15%', size: 22, delay: 0.4, dur: 4.3 },
   { type: 'quarter', color: '#AF52DE', x: '18%', y: '42%', size: 18, delay: 1.2, dur: 3.4 },
   { type: 'eighth', color: '#4CD964', x: '82%', y: '48%', size: 20, delay: 0.6, dur: 3.9 },
   { type: 'quarter', color: '#FF2D55', x: '22%', y: '65%', size: 22, delay: 0.1, dur: 4.0 },
   { type: 'eighth', color: '#34A853', x: '76%', y: '68%', size: 24, delay: 1.4, dur: 3.6 },
+  // Bottom center cluster - denser
+  { type: 'quarter', color: '#FF3B30', x: '35%', y: '82%', size: 22, delay: 0.2, dur: 3.3 },
+  { type: 'eighth', color: '#FFCC00', x: '42%', y: '88%', size: 26, delay: 0.7, dur: 4.1 },
+  { type: 'quarter', color: '#4285F4', x: '50%', y: '85%', size: 20, delay: 1.1, dur: 3.7 },
+  { type: 'eighth', color: '#4CD964', x: '58%', y: '90%', size: 24, delay: 0.4, dur: 3.9 },
+  { type: 'quarter', color: '#AF52DE', x: '65%', y: '83%', size: 22, delay: 0.9, dur: 4.3 },
+  { type: 'eighth', color: '#FF9500', x: '45%', y: '93%', size: 28, delay: 1.3, dur: 3.5 },
+  { type: 'quarter', color: '#FF2D55', x: '55%', y: '95%', size: 20, delay: 0.6, dur: 3.8 },
+  { type: 'eighth', color: '#34A853', x: '38%', y: '92%', size: 18, delay: 1.0, dur: 4.0 },
+  { type: 'quarter', color: '#FF3B30', x: '62%', y: '92%', size: 24, delay: 0.3, dur: 3.4 },
+  { type: 'eighth', color: '#4285F4', x: '48%', y: '78%', size: 18, delay: 0.8, dur: 4.2 },
+  { type: 'quarter', color: '#FFCC00', x: '30%', y: '76%', size: 16, delay: 1.5, dur: 3.6 },
+  { type: 'eighth', color: '#AF52DE', x: '68%', y: '78%', size: 16, delay: 0.5, dur: 3.2 },
 ];
 
 function CartoonNote({ note }) {
