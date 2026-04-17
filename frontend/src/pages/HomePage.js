@@ -82,11 +82,11 @@ function HomePage() {
   ];
 
   const characters = [
-    { name: 'Finn Danger', image: '/assets/characters/finn-danger.png', delay: 0.5 },
+    { name: 'Finn', image: '/assets/characters/finn-danger.png', delay: 0.5 },
     { name: 'Chunk', image: '/assets/characters/chunk.png', delay: 0.6 },
     { name: 'Dr. Jellybone', image: '/assets/characters/dr-jellybone.png', delay: 0.7 },
     { name: 'Jazzy', image: '/assets/characters/jazzy.png', delay: 0.75 },
-    { name: 'Llama Lou & Stew', image: '/assets/characters/llama-lou-stew.png', delay: 0.8 },
+    { name: 'Lou & Stew', image: '/assets/characters/llama-lou-stew.png', delay: 0.8 },
     { name: 'Charlie', image: '/assets/characters/charlie-polliwog.png', delay: 0.9 },
   ];
 

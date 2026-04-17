@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Play, Square, Trash2, Plus, Minus, Volume2 } from 'lucide-react';
 import { BELLS } from '../components/JellyBells';
 import { GameHeader } from '../components/GameUI';
+import { PageCharacters } from '../components/PageCharacters';
 import useAudio from '../hooks/useAudio';
 
 const DEFAULT_BPM = 100;
@@ -429,6 +430,7 @@ function LoopStudioPage() {
           </div>
         </div>
       </main>
+      <PageCharacters page="loop-studio" />
     </div>
   );
 }

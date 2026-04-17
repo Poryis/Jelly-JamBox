@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Play, Eye, RotateCcw } from 'lucide-react';
 import JellyBellsRow, { BELLS, KEY_TO_NOTE } from '../components/JellyBells';
 import { GameHeader, FeedbackPopup, ProgressBar } from '../components/GameUI';
+import { PageCharacters } from '../components/PageCharacters';
 import useAudio from '../hooks/useAudio';
 
 // Patterns for Simon Says (progressively harder)
@@ -215,21 +216,7 @@ function SimonSaysPage({ score, setScore, gameStats, setGameStats, resetGame }) 
           <span className="text-xl font-bold">START!</span>
         </motion.button>
 
-        {/* Character - Charlie the Polliwog */}
-        <motion.div 
-          className="fixed bottom-4 left-4 hidden lg:block"
-          initial={{ x: -100, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: 0.6 }}
-        >
-          <motion.img
-            src="/assets/characters/charlie-polliwog.png"
-            alt="Charlie the Polliwog"
-            className="w-24 h-28 object-contain"
-            animate={{ y: [0, -10, 0] }}
-            transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }}
-          />
-        </motion.div>
+        <PageCharacters page="simon-menu" />
       </div>
     );
   }
@@ -332,6 +319,7 @@ function SimonSaysPage({ score, setScore, gameStats, setGameStats, resetGame }) 
           </motion.p>
         )}
       </main>
+      <PageCharacters page="simon-play" />
     </div>
   );
 }

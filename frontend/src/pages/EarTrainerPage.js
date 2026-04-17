@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Play, Ear, RotateCcw, Volume2, Trophy } from 'lucide-react';
 import JellyBellsRow, { BELLS } from '../components/JellyBells';
 import { GameHeader } from '../components/GameUI';
+import { PageCharacters } from '../components/PageCharacters';
 import useAudio from '../hooks/useAudio';
 import { getEarTrainerStats, saveEarTrainerStats } from '../hooks/useScores';
 
@@ -278,6 +279,7 @@ function EarTrainerPage() {
           ))}
         </div>
       </main>
+      <PageCharacters page="ear-trainer" />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Play, Trophy, Zap } from 'lucide-react';
 import { BELLS, KEY_TO_NOTE } from '../components/JellyBells';
 import { GameHeader, FeedbackPopup, ProgressBar } from '../components/GameUI';
+import { PageCharacters } from '../components/PageCharacters';
 import useAudio from '../hooks/useAudio';
 import { SONG_LIBRARY, SPEED_SETTINGS, getSongsByCategory } from '../data/songs';
 import { getHighScore, saveHighScore, getTopScores } from '../hooks/useScores';
@@ -271,6 +272,7 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
         <motion.button data-testid="start-game-button" className="chunky-btn bg-[var(--jma-green)] text-white px-8 py-3 flex items-center gap-3" onClick={startGame} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
           <Play className="w-6 h-6" /><span className="text-xl font-bold font-display">START!</span>
         </motion.button>
+        <PageCharacters page="rhythm-menu" />
       </div>
     );
   }
