@@ -466,8 +466,8 @@ function LoopStudioPage() {
               <TurntableVisual activeHits={activeHits} />
             </div>
           </div>
-          {/* Bells all the way at the bottom, centered */}
-          <div className="flex justify-center -mt-8">
+          {/* Bells fixed to bottom of page, centered */}
+          <div className="fixed bottom-2 left-1/2 -translate-x-1/2 z-20">
             <BellsVisual activeNotes={activeBellNotes} />
           </div>
         </div>
