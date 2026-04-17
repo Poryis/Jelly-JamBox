@@ -2,11 +2,11 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Music, Circle, Square, Play, RotateCcw, ChevronRight, Volume2 } from 'lucide-react';
-import JellyBellsRow, { BELLS } from '../components/JellyBells';
+import { BELLS, KEY_TO_NOTE } from '../components/JellyBells';
 import { GameHeader, NotationDisplay } from '../components/GameUI';
 import useAudio from '../hooks/useAudio';
 
-// Guided songs for step-by-step learning
+// Guided songs
 const GUIDED_SONGS = [
   { name: 'Do Re Mi', notes: ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'High C'] },
   { name: 'Hot Cross Buns', notes: ['E', 'D', 'C', 'E', 'D', 'C', 'C', 'C', 'C', 'C', 'D', 'D', 'D', 'D', 'E', 'D', 'C'] },
@@ -14,92 +14,144 @@ const GUIDED_SONGS = [
   { name: 'Ode to Joy', notes: ['E', 'E', 'F', 'G', 'G', 'F', 'E', 'D', 'C', 'C', 'D', 'E', 'E', 'D', 'D'] },
 ];
 
-// Sound modes
+// Sound modes with image config
 const SOUND_MODES = [
-  { id: 'bells', label: 'Jelly Bells', icon: '🔔' },
-  { id: 'xylophone', label: 'Xylophone', icon: '🎵' },
-  { id: 'piano', label: 'Piano', icon: '🎹' },
+  { id: 'bells', label: 'Jelly Bells' },
+  { id: 'xylophone', label: 'Xylophone' },
+  { id: 'piano', label: 'Piano' },
 ];
 
-// Xylophone audio mapping
-const XYLO_FILES = { C: '/assets/audio/xylo low c.mp3', D: '/assets/audio/xylo D.mp3', E: '/assets/audio/xylo E.mp3', F: '/assets/audio/xylo F.mp3', G: '/assets/audio/xylo G.mp3', A: '/assets/audio/xylo a.mp3', B: '/assets/audio/xylo b.mp3', 'High C': '/assets/audio/xylo High c.mp3' };
-// Piano audio mapping
-const PIANO_FILES = { C: '/assets/audio/C4.mp3', D: '/assets/audio/D4.mp3', E: '/assets/audio/E4.mp3', F: '/assets/audio/F4.mp3', G: '/assets/audio/G4.mp3', A: '/assets/audio/A4.mp3', B: '/assets/audio/B4.mp3', 'High C': '/assets/audio/C5.mp3' };
+// Xylophone bar images per note
+const XYLO_IMAGES = {
+  C: '/assets/xylophone/bars/C bar.png',
+  D: '/assets/xylophone/bars/D bar.png',
+  E: '/assets/xylophone/bars/E bar.png',
+  F: '/assets/xylophone/bars/F bar.png',
+  G: '/assets/xylophone/bars/G bar.png',
+  A: '/assets/xylophone/bars/A bar.png',
+  B: '/assets/xylophone/bars/B bar.png',
+  'High C': '/assets/xylophone/bars/High C bar.png',
+};
 
-// Particle burst component
+// Piano key images per note (solfège naming)
+const PIANO_IMAGES = {
+  C: '/assets/piano/keys/Do.png',
+  D: '/assets/piano/keys/Re.png',
+  E: '/assets/piano/keys/Mi.png',
+  F: '/assets/piano/keys/Fa.png',
+  G: '/assets/piano/keys/So.png',
+  A: '/assets/piano/keys/La.png',
+  B: '/assets/piano/keys/Ti.png',
+  'High C': '/assets/piano/keys/Do.png',
+};
+
+// Audio file paths per mode
+const XYLO_AUDIO = {
+  C: '/assets/audio/xylo low c.mp3', D: '/assets/audio/xylo D.mp3', E: '/assets/audio/xylo E.mp3',
+  F: '/assets/audio/xylo F.mp3', G: '/assets/audio/xylo G.mp3', A: '/assets/audio/xylo a.mp3',
+  B: '/assets/audio/xylo b.mp3', 'High C': '/assets/audio/xylo High c.mp3',
+};
+const PIANO_AUDIO = {
+  C: '/assets/audio/C4.mp3', D: '/assets/audio/D4.mp3', E: '/assets/audio/E4.mp3',
+  F: '/assets/audio/F4.mp3', G: '/assets/audio/G4.mp3', A: '/assets/audio/A4.mp3',
+  B: '/assets/audio/B4.mp3', 'High C': '/assets/audio/C5.mp3',
+};
+
+const noteToSolfege = { C: 'Do', D: 'Re', E: 'Mi', F: 'Fa', G: 'So', A: 'La', B: 'Ti', 'High C': 'Do' };
+
+// Particle burst
 function ParticleBurst({ x, y, color }) {
   const particles = Array.from({ length: 8 }, (_, i) => {
     const angle = (i / 8) * Math.PI * 2;
     const dist = 40 + Math.random() * 30;
-    return {
-      id: i,
-      tx: Math.cos(angle) * dist,
-      ty: Math.sin(angle) * dist,
-      size: 6 + Math.random() * 8,
-      shape: Math.random() > 0.5 ? 'circle' : 'star',
-    };
+    return { id: i, tx: Math.cos(angle) * dist, ty: Math.sin(angle) * dist, size: 6 + Math.random() * 8 };
   });
-
   return (
     <div className="fixed pointer-events-none z-50" style={{ left: x, top: y }}>
       {particles.map(p => (
-        <motion.div
-          key={p.id}
-          className="absolute rounded-full"
-          style={{
-            width: p.size,
-            height: p.size,
-            backgroundColor: color,
-            borderRadius: p.shape === 'circle' ? '50%' : '2px',
-            transform: p.shape === 'star' ? 'rotate(45deg)' : 'none',
-          }}
+        <motion.div key={p.id} className="absolute rounded-full"
+          style={{ width: p.size, height: p.size, backgroundColor: color }}
           initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
           animate={{ x: p.tx, y: p.ty, opacity: 0, scale: 0 }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
-        />
+          transition={{ duration: 0.6, ease: 'easeOut' }} />
       ))}
     </div>
   );
 }
 
-// Character reaction component
-function CharacterReaction({ streak, lastAction }) {
+// Character reaction
+function CharacterReaction({ streak }) {
   const reactions = [
-    { min: 0, src: '/assets/characters/finn-danger.png', msg: 'Play some notes!' },
+    { min: 0, src: '/assets/characters/finn-danger.png', msg: '' },
     { min: 3, src: '/assets/characters/finn-danger.png', msg: 'Nice!' },
     { min: 6, src: '/assets/characters/chunk.png', msg: 'Keep going!' },
     { min: 10, src: '/assets/characters/jazzy.png', msg: 'Amazing!' },
     { min: 15, src: '/assets/characters/dr-jellybone.png', msg: 'SUPERSTAR!' },
   ];
-
   const reaction = [...reactions].reverse().find(r => streak >= r.min) || reactions[0];
-
   return (
-    <motion.div
-      className="fixed bottom-3 right-3 flex items-end gap-2 z-30 hidden md:flex"
-      key={reaction.msg}
-      initial={{ x: 50, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-    >
+    <motion.div className="fixed bottom-3 right-3 flex items-end gap-2 z-30 hidden md:flex"
+      key={reaction.msg} initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }}>
       {streak >= 3 && (
-        <motion.div
-          className="bg-white px-3 py-2 rounded-2xl border-3 border-[var(--jma-dark)] shadow-lg mb-8"
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: 'spring' }}
-        >
+        <motion.div className="bg-white px-3 py-2 rounded-2xl border-3 border-[var(--jma-dark)] shadow-lg mb-8"
+          initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring' }}>
           <span className="font-bold text-sm" style={{ color: 'var(--jma-dark)' }}>{reaction.msg}</span>
         </motion.div>
       )}
-      <motion.img
-        src={reaction.src}
-        alt="character"
-        className="w-20 h-24 object-contain"
+      <motion.img src={reaction.src} alt="character" className="w-20 h-24 object-contain"
         animate={streak >= 5 ? { y: [0, -10, 0], rotate: [-3, 3, -3] } : { y: [0, -5, 0] }}
-        transition={{ repeat: Infinity, duration: streak >= 10 ? 0.5 : 1.5, ease: 'easeInOut' }}
-      />
+        transition={{ repeat: Infinity, duration: streak >= 10 ? 0.5 : 1.5, ease: 'easeInOut' }} />
     </motion.div>
   );
+}
+
+// Instrument display for each mode
+function InstrumentRow({ soundMode, onPlayNote, highlightedNote, pressedKeys }) {
+  if (soundMode === 'xylophone') {
+    return (
+      <div className="relative">
+        <img src="/assets/xylophone/no-bars.png" alt="Xylophone frame" className="w-full max-w-2xl mx-auto h-auto opacity-30 absolute inset-0 object-contain" />
+        <div className="flex justify-center items-end gap-1 md:gap-2 p-4 relative z-10" data-testid="xylophone-row">
+          {BELLS.map(bell => (
+            <motion.button key={bell.note} data-testid={`xylo-${bell.note.replace(' ', '-')}`}
+              className="flex flex-col items-center"
+              onPointerDown={(e) => { e.preventDefault(); onPlayNote(bell.note); }}
+              animate={{ scale: pressedKeys.has(bell.key) ? 0.92 : 1 }}
+              transition={{ type: 'spring', stiffness: 500 }}
+              whileHover={{ scale: 1.05 }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', touchAction: 'manipulation' }}>
+              <img src={XYLO_IMAGES[bell.note]} alt={bell.solfege} className="w-10 h-20 md:w-14 md:h-28 object-contain" draggable={false} />
+              <span className="text-xs md:text-sm font-bold mt-1" style={{ color: bell.color }}>{bell.solfege}</span>
+              <div className="w-5 h-5 rounded-full bg-white border border-[var(--jma-dark)] text-[9px] font-bold flex items-center justify-center mt-0.5" style={{ color: bell.color }}>{bell.key}</div>
+            </motion.button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (soundMode === 'piano') {
+    return (
+      <div className="flex justify-center items-end gap-0 p-4" data-testid="piano-row">
+        {BELLS.map(bell => (
+          <motion.button key={bell.note} data-testid={`piano-${bell.note.replace(' ', '-')}`}
+            className="flex flex-col items-center"
+            onPointerDown={(e) => { e.preventDefault(); onPlayNote(bell.note); }}
+            animate={{ scale: pressedKeys.has(bell.key) ? 0.95 : 1 }}
+            transition={{ type: 'spring', stiffness: 500 }}
+            whileHover={{ scale: 1.03 }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', touchAction: 'manipulation' }}>
+            <img src={PIANO_IMAGES[bell.note]} alt={bell.solfege} className="w-12 h-24 md:w-16 md:h-32 object-contain" draggable={false} />
+            <span className="text-xs md:text-sm font-bold mt-1" style={{ color: bell.color }}>{bell.solfege}</span>
+            <div className="w-5 h-5 rounded-full bg-white border border-[var(--jma-dark)] text-[9px] font-bold flex items-center justify-center mt-0.5" style={{ color: bell.color }}>{bell.key}</div>
+          </motion.button>
+        ))}
+      </div>
+    );
+  }
+
+  // Default: Jelly Bells (use the existing row but handle via parent)
+  return null;
 }
 
 function FreePlayPage() {
@@ -110,63 +162,74 @@ function FreePlayPage() {
   const [particles, setParticles] = useState([]);
   const [streak, setStreak] = useState(0);
   const [soundMode, setSoundMode] = useState('bells');
+  const [pressedKeys, setPressedKeys] = useState(new Set());
 
   // Recording state
   const [isRecording, setIsRecording] = useState(false);
   const [recording, setRecording] = useState([]);
   const [isPlayingBack, setIsPlayingBack] = useState(false);
   const recordStartRef = useRef(null);
-  const playbackRef = useRef(null);
+  const playbackTimeouts = useRef([]);
 
   // Guided song state
   const [guidedMode, setGuidedMode] = useState(false);
   const [guidedSongIdx, setGuidedSongIdx] = useState(0);
   const [guidedStep, setGuidedStep] = useState(0);
 
-  // Extra audio buffers for xylophone/piano
+  // Audio context + buffers for xylo/piano
   const audioCtxRef = useRef(null);
   const extraBuffersRef = useRef({});
+  const loadedModesRef = useRef(new Set(['bells']));
 
-  // Preload xylophone and piano audio
-  useEffect(() => {
-    const preload = async () => {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      audioCtxRef.current = ctx;
-      const allFiles = { ...Object.fromEntries(Object.entries(XYLO_FILES).map(([k, v]) => [`xylo_${k}`, v])), ...Object.fromEntries(Object.entries(PIANO_FILES).map(([k, v]) => [`piano_${k}`, v])) };
-      for (const [key, url] of Object.entries(allFiles)) {
-        try {
-          const resp = await fetch(url);
-          const buf = await resp.arrayBuffer();
-          extraBuffersRef.current[key] = await ctx.decodeAudioData(buf);
-        } catch (e) { /* skip */ }
-      }
-    };
-    preload();
+  const getAudioCtx = useCallback(() => {
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume();
+    return audioCtxRef.current;
   }, []);
 
-  const playExtraSound = useCallback((note) => {
-    const ctx = audioCtxRef.current;
-    if (!ctx) return;
-    if (ctx.state === 'suspended') ctx.resume();
-    const key = `${soundMode}_${note}`;
-    const buffer = extraBuffersRef.current[key];
+  // Preload audio for a mode
+  const preloadMode = useCallback(async (mode) => {
+    if (loadedModesRef.current.has(mode)) return;
+    const ctx = getAudioCtx();
+    const files = mode === 'xylophone' ? XYLO_AUDIO : PIANO_AUDIO;
+    const promises = Object.entries(files).map(async ([note, url]) => {
+      try {
+        const resp = await fetch(url);
+        const buf = await resp.arrayBuffer();
+        extraBuffersRef.current[`${mode}_${note}`] = await ctx.decodeAudioData(buf);
+      } catch (e) { console.warn(`Failed to load ${mode} ${note}:`, e); }
+    });
+    await Promise.all(promises);
+    loadedModesRef.current.add(mode);
+  }, [getAudioCtx]);
+
+  // Preload on mode change
+  useEffect(() => {
+    if (soundMode !== 'bells') preloadMode(soundMode);
+  }, [soundMode, preloadMode]);
+
+  const playModeSound = useCallback((note) => {
+    if (soundMode === 'bells') {
+      playBellNote(note);
+      return;
+    }
+    const ctx = getAudioCtx();
+    const buffer = extraBuffersRef.current[`${soundMode}_${note}`];
     if (buffer) {
       const source = ctx.createBufferSource();
       const gain = ctx.createGain();
       source.buffer = buffer;
-      gain.gain.setValueAtTime(0.7, ctx.currentTime);
+      gain.gain.setValueAtTime(0.8, ctx.currentTime);
       source.connect(gain);
       gain.connect(ctx.destination);
       source.start(0);
     }
-  }, [soundMode]);
+  }, [soundMode, playBellNote, getAudioCtx]);
 
-  const noteToSolfege = { C: 'Do', D: 'Re', E: 'Mi', F: 'Fa', G: 'So', A: 'La', B: 'Ti', 'High C': 'Do' };
-
-  // Spawn particles at a position
   const spawnParticles = useCallback((note) => {
     const bell = BELLS.find(b => b.note === note);
-    // Approximate position based on note index
     const idx = BELLS.findIndex(b => b.note === note);
     const x = window.innerWidth * 0.25 + (idx / 7) * (window.innerWidth * 0.5);
     const y = window.innerHeight * 0.55;
@@ -177,38 +240,43 @@ function FreePlayPage() {
 
   const handlePlayNote = useCallback((note) => {
     initAudioContext();
-    if (soundMode === 'bells') {
-      playBellNote(note);
-    } else {
-      playExtraSound(note);
-    }
+    playModeSound(note);
     setLastNote(note);
     setPlayedNotes(prev => [...prev.slice(-11), note]);
     setStreak(prev => prev + 1);
     spawnParticles(note);
 
-    // Recording
     if (isRecording) {
       const time = Date.now() - recordStartRef.current;
       setRecording(prev => [...prev, { note, time }]);
     }
 
-    // Guided mode
     if (guidedMode) {
       const song = GUIDED_SONGS[guidedSongIdx];
       if (song && note === song.notes[guidedStep]) {
-        setGuidedStep(prev => {
-          const next = prev + 1;
-          if (next >= song.notes.length) {
-            // Song complete!
-            setTimeout(() => setGuidedStep(0), 500);
-            return 0;
-          }
-          return next;
-        });
+        setGuidedStep(prev => prev + 1 >= song.notes.length ? 0 : prev + 1);
       }
     }
-  }, [initAudioContext, playBellNote, playExtraSound, soundMode, isRecording, guidedMode, guidedSongIdx, guidedStep, spawnParticles]);
+  }, [initAudioContext, playModeSound, isRecording, guidedMode, guidedSongIdx, guidedStep, spawnParticles]);
+
+  // Keyboard handler
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const note = KEY_TO_NOTE[e.key];
+      if (note && !pressedKeys.has(e.key)) {
+        setPressedKeys(prev => new Set([...prev, e.key]));
+        handlePlayNote(note);
+      }
+    };
+    const handleKeyUp = (e) => {
+      if (KEY_TO_NOTE[e.key]) {
+        setPressedKeys(prev => { const s = new Set(prev); s.delete(e.key); return s; });
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => { window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('keyup', handleKeyUp); };
+  }, [handlePlayNote, pressedKeys]);
 
   // Reset streak after inactivity
   useEffect(() => {
@@ -216,54 +284,36 @@ function FreePlayPage() {
     return () => clearTimeout(timer);
   }, [streak]);
 
-  // Start recording
-  const startRecording = useCallback(() => {
-    setRecording([]);
-    setIsRecording(true);
-    recordStartRef.current = Date.now();
-  }, []);
-
-  // Stop recording
-  const stopRecording = useCallback(() => {
-    setIsRecording(false);
-  }, []);
-
-  // Play back recording
+  const startRecording = useCallback(() => { setRecording([]); setIsRecording(true); recordStartRef.current = Date.now(); }, []);
+  const stopRecording = useCallback(() => setIsRecording(false), []);
   const playBack = useCallback(() => {
     if (recording.length === 0 || isPlayingBack) return;
     setIsPlayingBack(true);
+    playbackTimeouts.current.forEach(t => clearTimeout(t));
+    playbackTimeouts.current = [];
     recording.forEach(({ note, time }) => {
-      playbackRef.current = setTimeout(() => {
-        handlePlayNote(note);
-      }, time);
+      const t = setTimeout(() => handlePlayNote(note), time);
+      playbackTimeouts.current.push(t);
     });
     const lastTime = recording[recording.length - 1]?.time || 0;
-    setTimeout(() => setIsPlayingBack(false), lastTime + 500);
+    const t = setTimeout(() => setIsPlayingBack(false), lastTime + 500);
+    playbackTimeouts.current.push(t);
   }, [recording, isPlayingBack, handlePlayNote]);
 
-  // Guided song info
   const currentGuidedSong = GUIDED_SONGS[guidedSongIdx];
   const nextGuidedNote = guidedMode && currentGuidedSong ? currentGuidedSong.notes[guidedStep] : null;
 
   return (
-    <div
-      className="min-h-screen flex flex-col"
-      data-testid="free-play-page"
-      style={{ backgroundImage: 'url(/assets/backgrounds/clubhouse.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}
-    >
+    <div className="min-h-screen flex flex-col" data-testid="free-play-page"
+      style={{ backgroundImage: 'url(/assets/backgrounds/clubhouse.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
       <GameHeader title="Free Play" showHomeButton={true} />
 
-      {/* Particles */}
       <AnimatePresence>
-        {particles.map(p => (
-          <ParticleBurst key={p.id} x={p.x} y={p.y} color={p.color} />
-        ))}
+        {particles.map(p => <ParticleBurst key={p.id} x={p.x} y={p.y} color={p.color} />)}
       </AnimatePresence>
 
-      {/* Character reaction */}
       <CharacterReaction streak={streak} />
 
-      {/* Left character */}
       <motion.div className="fixed bottom-3 left-3 hidden md:block z-20"
         initial={{ x: -80, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.5 }}>
         <motion.img src="/assets/characters/charlie-polliwog.png" alt="Charlie" className="w-16 h-20 object-contain"
@@ -271,9 +321,8 @@ function FreePlayPage() {
       </motion.div>
 
       <main className="flex-1 flex flex-col items-center justify-center pt-16 pb-6 px-4">
-        {/* Top controls bar */}
+        {/* Top controls */}
         <div className="flex flex-wrap items-center justify-center gap-2 mb-3">
-          {/* Sound mode switcher */}
           <div className="game-card px-3 py-2 flex items-center gap-1">
             {SOUND_MODES.map(mode => (
               <button key={mode.id} data-testid={`sound-mode-${mode.id}`}
@@ -283,17 +332,13 @@ function FreePlayPage() {
               </button>
             ))}
           </div>
-
-          {/* Record controls */}
           <div className="game-card px-3 py-2 flex items-center gap-2">
             {!isRecording ? (
-              <button data-testid="record-btn" className="chunky-btn bg-[var(--jma-red)] text-white px-3 py-1 flex items-center gap-1 text-xs font-bold"
-                onClick={startRecording}>
+              <button data-testid="record-btn" className="chunky-btn bg-[var(--jma-red)] text-white px-3 py-1 flex items-center gap-1 text-xs font-bold" onClick={startRecording}>
                 <Circle className="w-3 h-3 fill-current" /> REC
               </button>
             ) : (
-              <button data-testid="stop-record-btn" className="chunky-btn bg-[var(--jma-dark)] text-white px-3 py-1 flex items-center gap-1 text-xs font-bold"
-                onClick={stopRecording}>
+              <button data-testid="stop-record-btn" className="chunky-btn bg-[var(--jma-dark)] text-white px-3 py-1 flex items-center gap-1 text-xs font-bold" onClick={stopRecording}>
                 <Square className="w-3 h-3 fill-current" /> STOP
               </button>
             )}
@@ -304,8 +349,6 @@ function FreePlayPage() {
               </button>
             )}
           </div>
-
-          {/* Guided mode toggle */}
           <div className="game-card px-3 py-2 flex items-center gap-2">
             <button data-testid="guided-toggle" className={`chunky-btn px-3 py-1 text-xs font-bold ${guidedMode ? 'bg-[var(--jma-blue)] text-white' : 'bg-white'}`}
               onClick={() => setGuidedMode(!guidedMode)}>
@@ -314,22 +357,20 @@ function FreePlayPage() {
           </div>
         </div>
 
-        {/* Guided song selector */}
         {guidedMode && (
           <motion.div className="game-card px-4 py-2 mb-3 flex items-center gap-3" initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
-            <button onClick={() => setGuidedSongIdx(i => Math.max(0, i - 1))} className="p-1"><ChevronRight className="w-4 h-4 rotate-180" /></button>
+            <button onClick={() => { setGuidedSongIdx(i => Math.max(0, i - 1)); setGuidedStep(0); }} className="p-1"><ChevronRight className="w-4 h-4 rotate-180" /></button>
             <div className="text-center">
               <p className="text-sm font-bold font-display" style={{ color: 'var(--jma-dark)' }}>{currentGuidedSong?.name}</p>
               <p className="text-xs opacity-60">Note {guidedStep + 1} of {currentGuidedSong?.notes.length}</p>
             </div>
-            <button onClick={() => setGuidedSongIdx(i => Math.min(GUIDED_SONGS.length - 1, i + 1))} className="p-1"><ChevronRight className="w-4 h-4" /></button>
+            <button onClick={() => { setGuidedSongIdx(i => Math.min(GUIDED_SONGS.length - 1, i + 1)); setGuidedStep(0); }} className="p-1"><ChevronRight className="w-4 h-4" /></button>
             <button onClick={() => setGuidedStep(0)} className="p-1"><RotateCcw className="w-4 h-4" /></button>
           </motion.div>
         )}
 
-        {/* Current note + played history */}
         {lastNote && (
-          <motion.div key={lastNote + Date.now()} initial={{ scale: 0.8 }} animate={{ scale: 1 }} className="mb-2">
+          <motion.div key={lastNote + streak} initial={{ scale: 0.8 }} animate={{ scale: 1 }} className="mb-2">
             <NotationDisplay currentNote={`${lastNote} (${noteToSolfege[lastNote]})`} />
           </motion.div>
         )}
@@ -346,26 +387,50 @@ function FreePlayPage() {
           </div>
         )}
 
-        {/* Jelly Bells */}
+        {/* Instrument display - changes based on sound mode */}
         <motion.div className="game-board p-3 md:p-6" initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }}>
-          <JellyBellsRow
-            onPlayNote={handlePlayNote}
-            highlightedNote={nextGuidedNote}
-            showNotation={true}
-          />
+          {soundMode === 'bells' ? (
+            <div className="bell-row" data-testid="jelly-bells-row">
+              {BELLS.map(bell => {
+                const isPressed = pressedKeys.has(bell.key);
+                const isHighlighted = nextGuidedNote === bell.note;
+                return (
+                  <motion.div key={bell.note} className="bell-container" whileHover={{ scale: 1.05 }}>
+                    <motion.button data-testid={`bell-${bell.note.replace(' ', '-')}`}
+                      className={`bell-instrument relative ${isHighlighted ? 'bell-highlight' : ''}`}
+                      onPointerDown={(e) => { e.preventDefault(); handlePlayNote(bell.note); }}
+                      animate={{ scale: isPressed ? 0.9 : 1 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                      style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', touchAction: 'manipulation' }}>
+                      <img src={isPressed ? bell.image2 : bell.image1} alt={bell.solfege}
+                        className="w-20 h-24 md:w-28 md:h-32 object-contain pointer-events-none" draggable={false} />
+                      <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-white border-2 border-[var(--jma-dark)] flex items-center justify-center text-xs font-bold"
+                        style={{ color: bell.color }}>{bell.key}</div>
+                      {isHighlighted && (
+                        <motion.div className="absolute inset-0 rounded-full" style={{ background: `radial-gradient(circle, ${bell.color}80 0%, transparent 70%)`, zIndex: -1 }}
+                          animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 0.6 }} />
+                      )}
+                    </motion.button>
+                    <div className="bell-note-label text-center">
+                      <span style={{ color: bell.color }}>{bell.solfege}</span>
+                      <span className="block text-xs opacity-70">({bell.note})</span>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          ) : (
+            <InstrumentRow soundMode={soundMode} onPlayNote={handlePlayNote} highlightedNote={nextGuidedNote} pressedKeys={pressedKeys} />
+          )}
         </motion.div>
 
-        {/* Educational tip */}
         <motion.div className="mt-4 max-w-md text-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
           <p className="text-sm md:text-base" style={{ color: 'var(--jma-dark)' }}>
             <span className="font-bold">Music Tip:</span>{' '}
-            {guidedMode
-              ? `Play the highlighted bell! Next note: ${noteToSolfege[nextGuidedNote] || '?'}`
-              : 'The notes go up like stairs - Do, Re, Mi, Fa, So, La, Ti, Do!'}
+            {guidedMode ? `Play the highlighted note! Next: ${noteToSolfege[nextGuidedNote] || '?'}` : 'The notes go up like stairs - Do, Re, Mi, Fa, So, La, Ti, Do!'}
           </p>
         </motion.div>
 
-        {/* Recording indicator */}
         {isRecording && (
           <motion.div className="mt-3 flex items-center gap-2" animate={{ opacity: [1, 0.5, 1] }} transition={{ repeat: Infinity, duration: 1 }}>
             <div className="w-3 h-3 rounded-full bg-[var(--jma-red)]" />
