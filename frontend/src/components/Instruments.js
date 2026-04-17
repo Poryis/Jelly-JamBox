@@ -81,46 +81,50 @@ export function PianoInstrument({ onPlayNote, pressedKeys, highlightedNote }) {
 
 // Drum kit - refined positioning
 export function DrumKitVisual({ activeHits }) {
+  // Use a counter to force re-render on each kick hit
+  const kickHit = activeHits?.has('kick');
+  
   return (
     <div className="relative mx-auto" style={{ width: '380px', height: '240px' }}>
-      {/* BACK: Crash - behind snare, bigger, lower */}
+      {/* BACK: Crash */}
       <motion.img src={activeHits?.has('crash') ? '/assets/drums/Crash 2.png' : '/assets/drums/Crash 1.png'}
         alt="Crash" className="absolute object-contain"
         style={{ left: '55px', bottom: '125px', height: '110px', zIndex: 1 }}
         animate={activeHits?.has('crash') ? { rotate: [0, -4, 0] } : {}} transition={{ duration: 0.12 }} />
 
-      {/* BACK: Ride - bigger, lower */}
+      {/* BACK: Ride */}
       <motion.img src={activeHits?.has('ride') ? '/assets/drums/Ride 2.png' : '/assets/drums/Ride 1.png'}
         alt="Ride" className="absolute object-contain"
         style={{ left: '235px', bottom: '110px', height: '120px', zIndex: 1 }}
         animate={activeHits?.has('ride') ? { rotate: [0, 3, 0] } : {}} transition={{ duration: 0.12 }} />
 
-      {/* Hi-Hat - left */}
+      {/* Hi-Hat */}
       <motion.img src={activeHits?.has('hihat') ? '/assets/drums/Hi hat 2.png' : '/assets/drums/Hi hat 1.png'}
         alt="Hi-Hat" className="absolute object-contain"
         style={{ left: '0px', bottom: '20px', height: '160px', zIndex: 3 }}
         animate={activeHits?.has('hihat') ? { y: [0, 3, 0] } : {}} transition={{ duration: 0.1 }} />
 
-      {/* Kick - center (SWAPPED: 2=idle, 1=hit based on user feedback) */}
-      <motion.img src={activeHits?.has('kick') ? '/assets/drums/kICK 1.png' : '/assets/drums/kICK 2.png'}
+      {/* Kick - center. Image swaps directly based on activeHits */}
+      <img
+        src={kickHit ? '/assets/drums/kICK 1.png' : '/assets/drums/kICK 2.png'}
         alt="Kick" className="absolute object-contain"
         style={{ left: '120px', bottom: '0px', width: '140px', zIndex: 3 }}
-        animate={activeHits?.has('kick') ? { scale: [1, 0.97, 1] } : {}} transition={{ duration: 0.1 }} />
+      />
 
-      {/* Big tom (tom 2) - moved UP, touching toms base left arm */}
+      {/* Big tom (tom 2) - moved UP and RIGHT with the group */}
       <motion.img src={activeHits?.has('lowTom') ? '/assets/drums/tOM 2 2.png' : '/assets/drums/tOM 2 1.png'}
         alt="Tom 2" className="absolute object-contain"
-        style={{ left: '105px', bottom: '115px', width: '70px', zIndex: 3 }}
+        style={{ left: '115px', bottom: '128px', width: '70px', zIndex: 3 }}
         animate={activeHits?.has('lowTom') ? { scale: [1, 0.95, 1] } : {}} transition={{ duration: 0.1 }} />
 
-      {/* Toms base T-bar - SMALLER, moved up on kick */}
+      {/* Toms base T-bar - moved UP and RIGHT with the group */}
       <img src="/assets/drums/toms-base.png" alt="Toms base" className="absolute object-contain"
-        style={{ left: '162px', bottom: '105px', width: '38px', zIndex: 4 }} />
+        style={{ left: '172px', bottom: '118px', width: '38px', zIndex: 4 }} />
 
-      {/* Small tom (tom 1) - moved LEFT, on top of toms base right arm */}
+      {/* Small tom (tom 1) - moved UP and RIGHT with the group */}
       <motion.img src={activeHits?.has('tom') ? '/assets/drums/tOM 1 2.png' : '/assets/drums/tOM 1 1.png'}
         alt="Tom 1" className="absolute object-contain"
-        style={{ left: '190px', bottom: '118px', width: '60px', zIndex: 5 }}
+        style={{ left: '200px', bottom: '130px', width: '60px', zIndex: 5 }}
         animate={activeHits?.has('tom') ? { scale: [1, 0.95, 1] } : {}} transition={{ duration: 0.1 }} />
 
       {/* FRONT: Snare */}
