@@ -297,7 +297,7 @@ function DrumKitPlayable({ onDrumDown, onDrumUp, registerDrumRef }) {
   const L = (n) => px(n + RIGHT_SHIFT);
   // Toms group: move together up and slightly right
   const TOMS_DX = 15;
-  const TOMS_DY = 25;  // (+) moves toms DOWN; settles them onto the kick drum
+  const TOMS_DY = 2;  // halfway between -21 (too high) and +25 (too low) — toms rest cleanly on kick
 
   return (
     <div className="relative mx-auto" style={{ width: px(500 + RIGHT_SHIFT + 30), height: px(340), transform: 'translateX(-30px)' }}>

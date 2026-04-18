@@ -192,7 +192,12 @@ function LoopStudioPage() {
         }
         else if (preset?.type === 'drum') {
           playDrumSound(preset.note);
-          if (drumKitRef.current) drumKitRef.current.flash(preset.note);
+          // Only flash kick & snare visually — cymbal/tom frame swaps have
+          // been unreliable in the loop context, so we prefer "static but clean"
+          // over "glitchy". Per user preference.
+          if (drumKitRef.current && (preset.note === 'kick' || preset.note === 'snare')) {
+            drumKitRef.current.flash(preset.note);
+          }
         }
         else if (preset?.type === 'scratch') {
           playDrumSound(preset.note);
