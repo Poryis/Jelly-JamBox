@@ -18,6 +18,14 @@ export const SONG_LIBRARY = [
     notes: ['C','E','F','G','C','E','F','G','C','E','F','G','E','C','E','D',
             'E','E','D','C','C','E','G','G','F','E','F','G','E','C','D','C']
   },
+  {
+    id: 'amazing_grace',
+    name: 'Amazing Grace',
+    category: 'Classic',
+    notes: ['C','E','G','E','G','E','C','A','G','E','D','C',
+            'C','E','G','E','G','E','C','E','D','C',
+            'E','G','E','D','C','E','D','C']
+  },
   // Video Game Vibes
   {
     id: 'mario_theme',
