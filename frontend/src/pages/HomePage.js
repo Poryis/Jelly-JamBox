@@ -139,7 +139,7 @@ function HomePage() {
         transition={{ type: 'spring', delay: 0.15, stiffness: 200 }}
         data-testid="game-title"
       >
-        Jelly Bells
+        Jelly Jam Box
       </motion.h1>
       <motion.p className="text-sm md:text-base font-bold mb-3 z-10" style={{ color: 'white', textShadow: '1px 1px 2px rgba(0,0,0,0.2)' }}
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
