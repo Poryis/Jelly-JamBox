@@ -83,25 +83,25 @@ function CharacterReaction({ streak }) {
 }
 
 // ============================================================================
-// PlayableBell: pure imperative DOM manipulation. The <img> src JSX prop is
-// CONSTANT (bell.image1) so React never overrides our imperative changes.
-// Swap happens synchronously in the event handler BEFORE any setState calls.
+// PlayableBell: BOTH frames rendered in DOM, stacked absolutely. Pressed frame
+// starts hidden (display:none). Press/release just toggles `display` on the
+// pressed frame - zero network, zero decode, zero React render - INSTANT.
 // ============================================================================
 function PlayableBell({ bell, onDown, onUp, isHighlighted, registerRef }) {
-  const imgRef = useRef(null);
+  const pressedRef = useRef(null);
 
   useEffect(() => {
-    if (registerRef) registerRef(bell.note, imgRef);
+    if (registerRef) registerRef(bell.note, pressedRef);
     return () => { if (registerRef) registerRef(bell.note, null); };
   }, [bell.note, registerRef]);
 
   const doDown = (e) => {
     if (e && e.preventDefault) e.preventDefault();
-    if (imgRef.current) imgRef.current.src = bell.image2; // INSTANT frame swap
+    if (pressedRef.current) pressedRef.current.style.display = 'block';
     onDown(bell.note);
   };
   const doUp = () => {
-    if (imgRef.current) imgRef.current.src = bell.image1;
+    if (pressedRef.current) pressedRef.current.style.display = 'none';
     onUp(bell.note);
   };
 
@@ -116,12 +116,22 @@ function PlayableBell({ bell, onDown, onUp, isHighlighted, registerRef }) {
         onPointerCancel={doUp}
         style={{ touchAction: 'none' }}
       >
+        {/* Idle frame */}
         <img
-          ref={imgRef}
           src={bell.image1}
           alt={bell.solfege}
           className="w-24 h-28 md:w-32 md:h-36 object-contain pointer-events-none"
           draggable={false}
+        />
+        {/* Pressed frame - stacked over idle, hidden by default */}
+        <img
+          ref={pressedRef}
+          src={bell.image2}
+          alt=""
+          aria-hidden="true"
+          className="w-24 h-28 md:w-32 md:h-36 object-contain pointer-events-none absolute top-0 left-0"
+          draggable={false}
+          style={{ display: 'none' }}
         />
         <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-white border-2 border-[var(--jma-dark)] flex items-center justify-center text-xs font-bold pointer-events-none"
           style={{ color: bell.color }}>{bell.key}</div>
@@ -135,42 +145,55 @@ function PlayableBell({ bell, onDown, onUp, isHighlighted, registerRef }) {
 }
 
 // ============================================================================
-// Drum piece with imperative image swap. Same pattern as PlayableBell.
+// Drum piece with dual-frame stacked approach. Same principle.
 // ============================================================================
 function PlayableDrumPiece({ drumId, info, onDown, onUp, style, registerRef }) {
-  const imgRef = useRef(null);
+  const pressedRef = useRef(null);
 
   useEffect(() => {
-    if (registerRef) registerRef(drumId, imgRef);
+    if (registerRef) registerRef(drumId, pressedRef);
     return () => { if (registerRef) registerRef(drumId, null); };
   }, [drumId, registerRef]);
 
   const doDown = (e) => {
     if (e && e.preventDefault) e.preventDefault();
-    if (imgRef.current) imgRef.current.src = info.img2;
+    if (pressedRef.current) pressedRef.current.style.display = 'block';
     onDown(drumId);
   };
   const doUp = () => {
-    if (imgRef.current) imgRef.current.src = info.img1;
+    if (pressedRef.current) pressedRef.current.style.display = 'none';
     onUp(drumId);
   };
 
+  // Strip custom badge props so they don't land on <img>
+  const { badgeLeft, badgeBottom, ...imgStyle } = style || {};
+
   return (
     <>
+      {/* Idle frame */}
       <img
-        ref={imgRef}
         src={info.img1}
         alt={info.label}
         className="absolute object-contain cursor-pointer"
-        style={{ ...style, touchAction: 'none' }}
+        style={{ ...imgStyle, touchAction: 'none' }}
         onPointerDown={doDown}
         onPointerUp={doUp}
         onPointerLeave={doUp}
         onPointerCancel={doUp}
         draggable={false}
       />
+      {/* Pressed frame - exact same position, hidden by default */}
+      <img
+        ref={pressedRef}
+        src={info.img2}
+        alt=""
+        aria-hidden="true"
+        className="absolute object-contain pointer-events-none"
+        style={{ ...imgStyle, display: 'none', touchAction: 'none' }}
+        draggable={false}
+      />
       <div className="absolute text-[10px] font-bold bg-white/80 rounded-full w-5 h-5 flex items-center justify-center border border-[var(--jma-dark)] pointer-events-none"
-        style={{ left: style?.badgeLeft, bottom: style?.badgeBottom, zIndex: 10, color: info.color }}>{info.key}</div>
+        style={{ left: badgeLeft, bottom: badgeBottom, zIndex: 10, color: info.color }}>{info.key}</div>
     </>
   );
 }
