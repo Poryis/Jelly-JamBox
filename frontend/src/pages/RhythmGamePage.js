@@ -292,14 +292,14 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
   return (
     <div className="min-h-screen sunburst-cool flex flex-col" data-testid="rhythm-game-playing">
       <GameHeader title={selectedSong.name} score={score} streak={gameStats.streak} showHomeButton={true} />
-      <div className="fixed top-16 left-0 right-0 px-4 py-2 z-40">
+      <div className="fixed top-16 left-0 right-0 px-4 py-1 z-40">
         <ProgressBar current={currentNoteIndex} total={selectedSong.notes.length} color={speedConfig.color} />
       </div>
       <AnimatePresence>{feedback && <FeedbackPopup feedback={feedback} />}</AnimatePresence>
-      <main className="flex-1 flex flex-col pt-24 pb-4 px-2 md:px-4">
-        <div className="game-board flex-1 relative overflow-hidden">
+      <main className="flex-1 flex flex-col pt-20 pb-2 px-2 md:px-4">
+        <div className="game-board relative overflow-hidden" style={{ height: 'calc(100vh - 100px)' }}>
           {/* Lanes - each lane has its bell at the target line */}
-          <div className="rhythm-lanes">
+          <div className="rhythm-lanes" style={{ height: '100%' }}>
             {activeBells.map((note) => {
               const bell = BELLS.find(b => b.note === note);
               if (!bellImgRefs.current[note]) bellImgRefs.current[note] = { current: null, pressedEl: null };
@@ -339,7 +339,7 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
                         ref={setIdleRef}
                         src={bell?.image1}
                         alt={bell?.solfege}
-                        className="w-16 h-20 md:w-24 md:h-28 object-contain pointer-events-none"
+                        className="w-20 h-24 md:w-28 md:h-32 lg:w-32 lg:h-36 object-contain pointer-events-none"
                         draggable={false}
                       />
                       <img
@@ -347,14 +347,14 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
                         src={bell?.image2}
                         alt=""
                         aria-hidden="true"
-                        className="w-16 h-20 md:w-24 md:h-28 object-contain pointer-events-none absolute top-0 left-0"
+                        className="w-20 h-24 md:w-28 md:h-32 lg:w-32 lg:h-36 object-contain pointer-events-none absolute top-0 left-0"
                         draggable={false}
                         style={{ display: 'none' }}
                       />
-                      <span className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-white border border-[var(--jma-dark)] text-xs font-bold flex items-center justify-center pointer-events-none"
+                      <span className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-white border border-[var(--jma-dark)] text-sm font-bold flex items-center justify-center pointer-events-none"
                         style={{ color: bell?.color }}>{bell?.key}</span>
                     </div>
-                    <span className="text-xs md:text-sm font-bold pointer-events-none mt-1" style={{ color: bell?.color }}>
+                    <span className="text-sm md:text-base font-bold pointer-events-none mt-1" style={{ color: bell?.color }}>
                       {bell?.solfege}
                     </span>
                   </button>

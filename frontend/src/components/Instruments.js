@@ -11,14 +11,14 @@ import { BELLS } from './JellyBells';
 
 // --- XYLOPHONE ---------------------------------------------------------------
 const XYLO_BAR_CONFIG = [
-  { note: 'C', height: 260, width: 80 },
-  { note: 'D', height: 240, width: 76 },
-  { note: 'E', height: 220, width: 72 },
-  { note: 'F', height: 200, width: 68 },
-  { note: 'G', height: 180, width: 64 },
-  { note: 'A', height: 160, width: 60 },
-  { note: 'B', height: 140, width: 56 },
-  { note: 'High C', height: 120, width: 52 },
+  { note: 'C', height: 340, width: 104 },
+  { note: 'D', height: 314, width: 100 },
+  { note: 'E', height: 288, width: 96 },
+  { note: 'F', height: 262, width: 92 },
+  { note: 'G', height: 236, width: 88 },
+  { note: 'A', height: 210, width: 84 },
+  { note: 'B', height: 184, width: 80 },
+  { note: 'High C', height: 158, width: 76 },
 ];
 
 function XyloBar({ config, bell, onPlayNote, onNoteUp, isHighlighted, registerRef }) {
@@ -130,19 +130,19 @@ function PianoKey({ bell, onPlayNote, onNoteUp, isHighlighted, registerRef }) {
       onPointerLeave={release}
       onPointerCancel={release}
       style={{ touchAction: 'none' }}>
-      <div ref={keyRef} className="rounded-t-xl border-4 border-[var(--jma-dark)] flex flex-col items-center justify-end pb-3 relative"
+      <div ref={keyRef} className="rounded-t-xl border-4 border-[var(--jma-dark)] flex flex-col items-center justify-end pb-4 relative"
         style={{
           backgroundColor: bell.color,
-          width: '80px', height: '220px',
-          boxShadow: isHighlighted ? `0 0 20px ${bell.color}80, 0 6px 0 0 var(--jma-dark)` : '0 6px 0 0 var(--jma-dark)',
+          width: '110px', height: '300px',
+          boxShadow: isHighlighted ? `0 0 20px ${bell.color}80, 0 8px 0 0 var(--jma-dark)` : '0 8px 0 0 var(--jma-dark)',
           marginLeft: '-2px',
         }}>
-        <div className="absolute top-3 left-2 w-2 rounded-full opacity-30 bg-white" style={{ height: '60%' }} />
-        <div className="bg-white/90 rounded-lg px-3 py-1 border-2 border-[var(--jma-dark)]">
-          <span className="text-base font-black" style={{ color: 'var(--jma-dark)' }}>{bell.solfege}</span>
+        <div className="absolute top-4 left-3 w-2.5 rounded-full opacity-30 bg-white" style={{ height: '60%' }} />
+        <div className="bg-white/90 rounded-lg px-4 py-1.5 border-2 border-[var(--jma-dark)]">
+          <span className="text-xl font-black" style={{ color: 'var(--jma-dark)' }}>{bell.solfege}</span>
         </div>
       </div>
-      <div className="w-7 h-7 rounded-full bg-white border-2 border-[var(--jma-dark)] text-sm font-bold flex items-center justify-center mt-1" style={{ color: bell.color }}>{bell.key}</div>
+      <div className="w-8 h-8 rounded-full bg-white border-2 border-[var(--jma-dark)] text-base font-bold flex items-center justify-center mt-2" style={{ color: bell.color }}>{bell.key}</div>
     </div>
   );
 }

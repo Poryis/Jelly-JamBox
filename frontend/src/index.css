@@ -185,8 +185,8 @@ h1, h2, h3, h4, h5, h6 {
 .rhythm-lanes {
   display: flex;
   position: relative;
-  height: 100%;
-  min-height: 520px;
+  width: 100%;
+  min-height: 600px;
   background: linear-gradient(to bottom, #f0f9ff 0%, #e0f7fa 100%);
 }
 
@@ -209,6 +209,7 @@ h1, h2, h3, h4, h5, h6 {
   background: linear-gradient(to bottom, transparent 0%, rgba(255,255,255,0.5) 50%, transparent 100%);
   border-top: 3px dashed var(--jma-dark);
   border-bottom: 3px dashed var(--jma-dark);
+  pointer-events: none;
 }
 
 .note-block {

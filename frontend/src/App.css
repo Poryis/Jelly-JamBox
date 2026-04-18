@@ -75,14 +75,7 @@
   }
 }
 
-/* Rhythm game lanes */
-.rhythm-lanes {
-  display: flex;
-  position: relative;
-  height: 70vh;
-  max-height: 500px;
-  background: linear-gradient(to bottom, #f0f9ff 0%, #e0f7fa 100%);
-}
+/* Rhythm game lanes - styling lives in index.css to avoid duplication */
 
 .rhythm-lane {
   flex: 1;

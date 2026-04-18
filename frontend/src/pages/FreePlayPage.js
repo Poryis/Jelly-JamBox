@@ -83,40 +83,52 @@ function CharacterReaction({ streak }) {
 }
 
 // ============================================================================
-// BellSemicircle: Arranges the 8 bells in a fun upward-curving arc.
-// Position each bell along a semicircle arc, lower notes at ends, higher toward top.
-// Actually simpler: keep left-to-right tonal order but place each bell along
-// an arc so the row has a gentle "smile" shape (ends dip down).
+// BellCircle: 8 bells arranged around a center point in a 3/4 ring (horseshoe).
+// Upright orientation, large, with a decorative center piece.
 // ============================================================================
-function BellSemicircle({ onDown, onUp, nextGuidedNote, registerRef }) {
-  // Arc: 8 bells across 180deg. Bell 0 at angle=180, bell 7 at angle=0.
-  // Use responsive radius via CSS vars.
+function BellCircle({ onDown, onUp, nextGuidedNote, registerRef }) {
   const n = BELLS.length;
+  // Arc from 225deg to -45deg (CCW) = 270deg ring, bottom gap.
+  // Bell 0 (Do) at top-left (angle=135), bell 7 (High C) at top-right (angle=45)
+  // going clockwise around the top and both sides.
+  // Actually easier: distribute from leftmost-bottom (-135) up around top to rightmost-bottom (-45 past 180).
+  // Use standard math convention: 0deg=right, 90deg=up. Start at 210deg (bottom-left), go CCW to -30deg (bottom-right)
+  // That's 240deg total. Spacing = 240 / 7 = 34.3deg.
+  const startAngle = 210;
+  const totalArc = 240;
   return (
     <div
-      className="relative w-full"
-      style={{
-        height: 'var(--bell-arc-h, 380px)',
-        maxWidth: '1200px',
-      }}
+      className="relative w-full mx-auto"
+      style={{ height: 'var(--bell-ring-h, 520px)', maxWidth: '900px' }}
       data-testid="jelly-bells-row"
     >
-      {/* Decorative arc stave line */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 1000 380" preserveAspectRatio="none">
-        <path d="M 80 300 Q 500 110 920 300" stroke="rgba(10,37,64,0.12)" strokeWidth="4" strokeDasharray="6 10" fill="none" strokeLinecap="round" />
+      {/* Center medallion */}
+      <div
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-center"
+        style={{ width: '120px', height: '120px' }}
+      >
+        <div className="w-full h-full rounded-full border-4 border-[var(--jma-dark)] bg-white/70 backdrop-blur-sm flex items-center justify-center shadow-[0_6px_0_0_var(--jma-dark)]">
+          <img src="/assets/ui/logo.png" alt="" className="w-20 h-20 object-contain" draggable={false} />
+        </div>
+      </div>
+      {/* Decorative ring path */}
+      <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 900 520" preserveAspectRatio="none">
+        <ellipse cx="450" cy="260" rx="340" ry="200"
+          stroke="rgba(10,37,64,0.12)" strokeWidth="4" strokeDasharray="6 10" fill="none" />
       </svg>
       {BELLS.map((bell, i) => {
-        // angle: 0 = rightmost, 180 = leftmost. distribute across arc.
-        // Use 170 to 10 deg so ends aren't touching container edges.
-        const angle = 170 - (i * (160 / (n - 1)));
+        const angle = startAngle + (i * (totalArc / (n - 1)));
         const rad = (angle * Math.PI) / 180;
-        // Container is 1000 wide, 380 tall in viewBox terms; convert to percentages
-        const cx = 50; // center x%
-        const cy = 78; // base pivot y%
-        const rx = 44; // horizontal radius %
-        const ry = 48; // vertical radius % (gentle rainbow arc, not too steep)
+        const cx = 50;
+        const cy = 50;
+        const rx = 40; // horizontal radius %
+        const ry = 38; // vertical radius %
         const x = cx + rx * Math.cos(rad);
-        const y = cy - ry * Math.sin(rad);
+        const y = cy - ry * Math.sin(rad); // subtract because CSS y grows downward
+        // Rotate each bell so its top points OUTWARD from the center.
+        // Bell at math-angle A is positioned at direction (cos A, sin A) from center.
+        // CSS rotation (clockwise from 12 o'clock) = 90 - A (degrees).
+        const bellRotation = 90 - angle;
         return (
           <div
             key={bell.note}
@@ -134,6 +146,7 @@ function BellSemicircle({ onDown, onUp, nextGuidedNote, registerRef }) {
               onUp={onUp}
               isHighlighted={nextGuidedNote === bell.note}
               registerRef={registerRef}
+              rotation={bellRotation}
             />
           </div>
         );
@@ -141,10 +154,13 @@ function BellSemicircle({ onDown, onUp, nextGuidedNote, registerRef }) {
     </div>
   );
 }
+// ============================================================================
+// PlayableBell: BOTH frames rendered in DOM, stacked absolutely.
 // Toggling: on press we HIDE idle and SHOW pressed (display swap on both).
 // This prevents transparent images from bleeding through each other.
 // Zero network, zero decode, zero React render - INSTANT.
-function PlayableBell({ bell, onDown, onUp, isHighlighted, registerRef }) {
+// `rotation` prop rotates ONLY the bell image, label stays upright.
+function PlayableBell({ bell, onDown, onUp, isHighlighted, registerRef, rotation = 0 }) {
   const idleRef = useRef(null);
   const pressedRef = useRef(null);
 
@@ -174,13 +190,17 @@ function PlayableBell({ bell, onDown, onUp, isHighlighted, registerRef }) {
         onPointerUp={doUp}
         onPointerLeave={doUp}
         onPointerCancel={doUp}
-        style={{ touchAction: 'none' }}
+        style={{
+          touchAction: 'none',
+          transform: rotation ? `rotate(${rotation}deg)` : undefined,
+          transformOrigin: 'center center',
+        }}
       >
         <img
           ref={idleRef}
           src={bell.image1}
           alt={bell.solfege}
-          className="w-20 h-24 md:w-28 md:h-32 object-contain pointer-events-none"
+          className="w-28 h-32 md:w-36 md:h-40 lg:w-40 lg:h-48 object-contain pointer-events-none"
           draggable={false}
         />
         <img
@@ -188,7 +208,7 @@ function PlayableBell({ bell, onDown, onUp, isHighlighted, registerRef }) {
           src={bell.image2}
           alt=""
           aria-hidden="true"
-          className="w-20 h-24 md:w-28 md:h-32 object-contain pointer-events-none absolute top-0 left-0"
+          className="w-28 h-32 md:w-36 md:h-40 lg:w-40 lg:h-48 object-contain pointer-events-none absolute top-0 left-0"
           draggable={false}
           style={{ display: 'none' }}
         />
@@ -259,17 +279,19 @@ function PlayableDrumPiece({ drumId, info, onDown, onUp, style, registerRef }) {
 }
 
 function DrumKitPlayable({ onDrumDown, onDrumUp, registerDrumRef }) {
-  // Larger drum kit - fills the game board. Scale 1.4x from previous layout.
-  const S = 1.4;
+  // Drum kit overall scale (increased for "MUCH bigger" feel)
+  const S = 1.6;
   const px = (n) => `${Math.round(n * S)}px`;
+  // Cymbals get an additional +10% on their heights
+  const cymS = 1.1;
   return (
-    <div className="relative mx-auto" style={{ width: px(500), height: px(320) }}>
-      {/* Crash: moved down (170→120) and in (70→120) */}
+    <div className="relative mx-auto" style={{ width: px(500), height: px(340) }}>
+      {/* Crash: moved back out LEFT (90) and UP a bit (155) with +10% height */}
       <PlayableDrumPiece drumId="crash"  info={DRUM_INFO.crash}  onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
-        style={{ left: px(120), bottom: px(120), height: px(130), zIndex: 1, badgeLeft: px(168), badgeBottom: px(118) }} />
-      {/* Ride: moved down (150→100) and in (320→270) */}
+        style={{ left: px(90), bottom: px(155), height: `${Math.round(130 * S * cymS)}px`, zIndex: 1, badgeLeft: px(145), badgeBottom: px(153) }} />
+      {/* Ride: moved back out RIGHT (305) and UP (135) with +10% height */}
       <PlayableDrumPiece drumId="ride"   info={DRUM_INFO.ride}   onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
-        style={{ left: px(270), bottom: px(100), height: px(160), zIndex: 1, badgeLeft: px(335), badgeBottom: px(98)  }} />
+        style={{ left: px(305), bottom: px(135), height: `${Math.round(160 * S * cymS)}px`, zIndex: 1, badgeLeft: px(380), badgeBottom: px(133) }} />
       <PlayableDrumPiece drumId="hihat"  info={DRUM_INFO.hihat}  onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
         style={{ left: px(0),   bottom: px(25),  height: px(210), zIndex: 3, badgeLeft: px(30),  badgeBottom: px(23)  }} />
       <PlayableDrumPiece drumId="kick"   info={DRUM_INFO.kick}   onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
@@ -280,7 +302,6 @@ function DrumKitPlayable({ onDrumDown, onDrumUp, registerDrumRef }) {
         style={{ left: px(215), bottom: px(143), width: px(50), zIndex: 4 }} />
       <PlayableDrumPiece drumId="tom"    info={DRUM_INFO.tom}    onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
         style={{ left: px(252), bottom: px(158), width: px(78),   zIndex: 5, badgeLeft: px(284), badgeBottom: px(156) }} />
-      {/* Snare: scaled 10% down (110 → 99) */}
       <PlayableDrumPiece drumId="snare"  info={DRUM_INFO.snare}  onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
         style={{ left: px(85),  bottom: px(12),  width: px(99),   zIndex: 6, badgeLeft: px(123), badgeBottom: px(10)  }} />
     </div>
@@ -549,7 +570,7 @@ function FreePlayPage() {
         )}
 
         {isDrumTab ? (
-          <motion.div className="game-board p-4 md:p-6 w-[95vw] max-w-[1200px] flex items-center justify-center"
+          <motion.div className="game-board p-4 md:p-6 w-[95vw] max-w-[1200px] min-h-[560px] md:min-h-[640px] flex items-center justify-center"
             initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
             <DrumKitPlayable onDrumDown={onDrumDown} onDrumUp={onDrumUp} registerDrumRef={registerDrumRef} />
           </motion.div>
@@ -564,8 +585,8 @@ function FreePlayPage() {
                 ))}
               </div>
             )}
-            <motion.div className="game-board p-3 md:p-5 w-[95vw] max-w-[1400px] flex items-center justify-center min-h-[420px] md:min-h-[480px]" initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
-              {activeTab === 'bells' && <BellSemicircle onDown={onBellDown} onUp={onBellUp} nextGuidedNote={nextGuidedNote} registerRef={registerBellRef} />}
+            <motion.div className="game-board p-3 md:p-5 w-[95vw] max-w-[1400px] flex items-center justify-center min-h-[560px] md:min-h-[640px]" initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
+              {activeTab === 'bells' && <BellCircle onDown={onBellDown} onUp={onBellUp} nextGuidedNote={nextGuidedNote} registerRef={registerBellRef} />}
               {activeTab === 'xylophone' && <XylophoneInstrument ref={xyloRef} onPlayNote={onBellDown} onNoteUp={onBellUp} highlightedNote={nextGuidedNote} />}
               {activeTab === 'piano' && <PianoInstrument ref={pianoRef} onPlayNote={onBellDown} onNoteUp={onBellUp} highlightedNote={nextGuidedNote} />}
             </motion.div>
