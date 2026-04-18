@@ -113,9 +113,9 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
       const note = KEY_TO_NOTE[e.key];
       if (note && activeBells.includes(note) && !pressedKeysRef.current.has(e.key)) {
         pressedKeysRef.current.add(e.key);
-        const bell = BELLS.find(b => b.note === note);
-        const img = bellImgRefs.current[note];
-        if (img && img.current && bell) img.current.src = bell.image2;
+        const refs = bellImgRefs.current[note];
+        if (refs?.current) refs.current.style.display = 'none';
+        if (refs?.pressedEl) refs.pressedEl.style.display = 'block';
         handlePlayNote(note);
       }
     };
@@ -123,9 +123,9 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
       const note = KEY_TO_NOTE[e.key];
       if (note) {
         pressedKeysRef.current.delete(e.key);
-        const bell = BELLS.find(b => b.note === note);
-        const img = bellImgRefs.current[note];
-        if (img && img.current && bell) img.current.src = bell.image1;
+        const refs = bellImgRefs.current[note];
+        if (refs?.pressedEl) refs.pressedEl.style.display = 'none';
+        if (refs?.current) refs.current.style.display = 'block';
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -263,25 +263,26 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
             <button key={cat} className={`px-3 py-1 rounded-full text-sm font-bold border-2 border-[var(--jma-dark)] transition-all ${categoryFilter === cat ? 'bg-[var(--jma-dark)] text-white' : 'bg-white'}`} onClick={() => setCategoryFilter(cat)}>{cat}</button>
           ))}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 w-full max-w-2xl mb-4 max-h-[40vh] overflow-y-auto pr-1">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 w-full max-w-2xl mb-4 max-h-[50vh] overflow-y-auto pr-1">
           {filteredSongs.map((song) => {
             const highScore = getHighScore(song.id, speed);
             return (
               <motion.button key={song.id} data-testid={`song-${song.id}`}
                 className={`level-card p-3 text-left flex items-center gap-3 ${selectedSong.id === song.id ? 'ring-4 ring-[var(--jma-blue)]' : ''}`}
-                onClick={() => setSelectedSong(song)} whileHover={{ scale: 1.02 }}>
+                onClick={() => { setSelectedSong(song); startGame(); }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}>
                 <div className="flex-1">
                   <h3 className="text-base font-bold font-display">{song.name}</h3>
                   <p className="text-xs opacity-60">{song.category} - {song.notes.length} notes</p>
                 </div>
                 {highScore && (<div className="text-right"><p className="text-xs font-bold" style={{ color: 'var(--jma-orange)' }}><Trophy className="inline w-3 h-3" /> {highScore.score}</p></div>)}
+                <Play className="w-5 h-5 text-[var(--jma-green)] flex-shrink-0" />
               </motion.button>
             );
           })}
         </div>
-        <motion.button data-testid="start-game-button" className="chunky-btn bg-[var(--jma-green)] text-white px-8 py-3 flex items-center gap-3" onClick={startGame} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-          <Play className="w-6 h-6" /><span className="text-xl font-bold font-display">START!</span>
-        </motion.button>
+        <p className="text-xs opacity-70 mb-3">Tap a song to start!</p>
         <PageCharacters page="rhythm-menu" />
       </div>
     );
@@ -297,13 +298,66 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
       <AnimatePresence>{feedback && <FeedbackPopup feedback={feedback} />}</AnimatePresence>
       <main className="flex-1 flex flex-col pt-24 pb-4 px-2 md:px-4">
         <div className="game-board flex-1 relative overflow-hidden">
-          {/* Lanes */}
+          {/* Lanes - each lane has its bell at the target line */}
           <div className="rhythm-lanes">
             {activeBells.map((note) => {
               const bell = BELLS.find(b => b.note === note);
+              if (!bellImgRefs.current[note]) bellImgRefs.current[note] = { current: null, pressedEl: null };
+              const setIdleRef = (el) => { bellImgRefs.current[note].current = el; };
+              const setPressedRef = (el) => { bellImgRefs.current[note].pressedEl = el; };
+              const doDown = (e) => {
+                e.preventDefault();
+                const idle = bellImgRefs.current[note]?.current;
+                const pressed = bellImgRefs.current[note]?.pressedEl;
+                if (idle) idle.style.display = 'none';
+                if (pressed) pressed.style.display = 'block';
+                handlePlayNote(note);
+              };
+              const doUp = (e) => {
+                if (e) e.preventDefault();
+                const idle = bellImgRefs.current[note]?.current;
+                const pressed = bellImgRefs.current[note]?.pressedEl;
+                if (pressed) pressed.style.display = 'none';
+                if (idle) idle.style.display = 'block';
+              };
               return (
                 <div key={note} className="rhythm-lane" style={{ backgroundColor: `${bell?.color}10` }}>
                   <div className="lane-target" />
+                  {/* Bell at the target line - notes land ON this bell */}
+                  <button
+                    data-testid={`game-bell-${note}`}
+                    type="button"
+                    onPointerDown={doDown}
+                    onPointerUp={doUp}
+                    onPointerLeave={doUp}
+                    onPointerCancel={doUp}
+                    className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center bg-transparent border-0 p-0 z-10"
+                    style={{ bottom: '20px', touchAction: 'none' }}
+                  >
+                    <div className="relative">
+                      <img
+                        ref={setIdleRef}
+                        src={bell?.image1}
+                        alt={bell?.solfege}
+                        className="w-16 h-20 md:w-24 md:h-28 object-contain pointer-events-none"
+                        draggable={false}
+                      />
+                      <img
+                        ref={setPressedRef}
+                        src={bell?.image2}
+                        alt=""
+                        aria-hidden="true"
+                        className="w-16 h-20 md:w-24 md:h-28 object-contain pointer-events-none absolute top-0 left-0"
+                        draggable={false}
+                        style={{ display: 'none' }}
+                      />
+                      <span className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-white border border-[var(--jma-dark)] text-xs font-bold flex items-center justify-center pointer-events-none"
+                        style={{ color: bell?.color }}>{bell?.key}</span>
+                    </div>
+                    <span className="text-xs md:text-sm font-bold pointer-events-none mt-1" style={{ color: bell?.color }}>
+                      {bell?.solfege}
+                    </span>
+                  </button>
                 </div>
               );
             })}
@@ -313,51 +367,6 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
                 <FallingBellNote key={note.id} note={note.note} laneIndex={note.laneIndex} totalLanes={activeBells.length} speed={speedConfig.fallSpeed} />
               ))}
             </AnimatePresence>
-          </div>
-
-          {/* Bell images at bottom - imperative press/release swap states (no React state) */}
-          <div className="absolute bottom-0 left-0 right-0 bg-white/95 border-t-4 border-[var(--jma-dark)] p-2">
-            <div className="flex justify-center gap-1 md:gap-2">
-              {activeBells.map(note => {
-                const bell = BELLS.find(b => b.note === note);
-                // Initialize ref holder for this bell if not present
-                if (!bellImgRefs.current[note]) bellImgRefs.current[note] = { current: null };
-                const setImgRef = (el) => { bellImgRefs.current[note].current = el; };
-                const doDown = (e) => {
-                  e.preventDefault();
-                  if (bellImgRefs.current[note]?.current && bell) bellImgRefs.current[note].current.src = bell.image2;
-                  handlePlayNote(note);
-                };
-                const doUp = (e) => {
-                  if (e) e.preventDefault();
-                  if (bellImgRefs.current[note]?.current && bell) bellImgRefs.current[note].current.src = bell.image1;
-                };
-                return (
-                  <button key={note} data-testid={`game-bell-${note}`}
-                    type="button"
-                    className="relative flex flex-col items-center bg-transparent border-0 p-0"
-                    onPointerDown={doDown}
-                    onPointerUp={doUp}
-                    onPointerLeave={doUp}
-                    onPointerCancel={doUp}
-                    style={{ touchAction: 'none' }}
-                  >
-                    <img
-                      ref={setImgRef}
-                      src={bell?.image1}
-                      alt={bell?.solfege}
-                      className="w-14 h-16 md:w-20 md:h-24 object-contain pointer-events-none"
-                      draggable={false}
-                    />
-                    <span className="text-xs md:text-sm font-bold pointer-events-none" style={{ color: bell?.color }}>
-                      {bell?.solfege}
-                    </span>
-                    <span className="absolute -top-1 -right-0 w-5 h-5 md:w-6 md:h-6 rounded-full bg-white border border-[var(--jma-dark)] text-[9px] md:text-xs font-bold flex items-center justify-center pointer-events-none"
-                      style={{ color: bell?.color }}>{bell?.key}</span>
-                  </button>
-                );
-              })}
-            </div>
           </div>
         </div>
       </main>

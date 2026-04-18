@@ -1,6 +1,8 @@
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Music, Drum, Brain, Layers, Ear } from 'lucide-react';
+import { Music, Drum, Brain, Layers, Ear, X } from 'lucide-react';
+import { getRandomFact } from '../data/musicFacts';
 
 // SVG cartoony music notes - colorful, thick-stroked, fun
 const NOTES = [
@@ -72,6 +74,14 @@ function CartoonNote({ note }) {
 
 function HomePage() {
   const navigate = useNavigate();
+  const [activeFact, setActiveFact] = useState(null); // { character, text, color, topic }
+
+  const showFact = useCallback((characterName) => {
+    const fact = getRandomFact(characterName);
+    if (fact) setActiveFact({ character: characterName, ...fact });
+  }, []);
+
+  const closeFact = useCallback(() => setActiveFact(null), []);
 
   const gameModes = [
     { id: 'free-play', title: 'Free Play', description: 'Tap the Jelly Bells!', icon: Music, color: '#4CD964', path: '/free-play' },
@@ -129,24 +139,97 @@ function HomePage() {
       <motion.div className="flex items-end justify-center gap-2 md:gap-4 mb-5 md:mb-6 z-10 flex-wrap"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }}>
         {characters.map((char, i) => (
-          <motion.div key={char.name}
+          <motion.button key={char.name}
+            data-testid={`home-character-${char.name.replace(/[^a-z0-9]/gi, '').toLowerCase()}`}
+            type="button"
             initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
             transition={{ delay: char.delay, type: 'spring', stiffness: 250 }}
-            className="flex flex-col items-center"
+            onClick={() => showFact(char.name)}
+            className="flex flex-col items-center bg-transparent border-0 p-0 cursor-pointer"
+            aria-label={`Click ${char.name} for a music fact`}
           >
             <motion.img src={char.image} alt={char.name}
               className="w-14 h-18 md:w-20 md:h-24 object-contain drop-shadow-lg"
               animate={{ y: [0, -8, 0] }}
               transition={{ repeat: Infinity, duration: 1.8 + i * 0.3, ease: 'easeInOut', delay: i * 0.15 }}
               whileHover={{ scale: 1.15, rotate: [0, -5, 5, 0] }}
+              whileTap={{ scale: 0.95 }}
             />
             <span className="text-[8px] md:text-[10px] font-bold mt-1 px-1.5 py-0.5 rounded-full whitespace-nowrap"
               style={{ color: 'white', backgroundColor: 'var(--jma-dark)' }}>
               {char.name}
             </span>
-          </motion.div>
+          </motion.button>
         ))}
       </motion.div>
+
+      {/* Music Fact Modal */}
+      <AnimatePresence>
+        {activeFact && (
+          <motion.div
+            data-testid="fact-modal-backdrop"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={closeFact}
+          >
+            <motion.div
+              data-testid="fact-modal"
+              className="relative bg-white rounded-3xl border-4 max-w-md w-full p-6 md:p-8 shadow-2xl"
+              style={{ borderColor: activeFact.color, boxShadow: `0 10px 0 0 ${activeFact.color}` }}
+              initial={{ scale: 0.7, y: 40, opacity: 0, rotate: -3 }}
+              animate={{ scale: 1, y: 0, opacity: 1, rotate: 0 }}
+              exit={{ scale: 0.7, y: 40, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                data-testid="fact-modal-close"
+                onClick={closeFact}
+                className="absolute -top-3 -right-3 w-9 h-9 rounded-full bg-white border-3 border-[var(--jma-dark)] flex items-center justify-center shadow-md hover:scale-110 transition-transform"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" style={{ color: 'var(--jma-dark)' }} />
+              </button>
+              <div className="flex items-start gap-4">
+                <motion.img
+                  src={characters.find(c => c.name === activeFact.character)?.image}
+                  alt={activeFact.character}
+                  className="w-20 h-24 md:w-24 md:h-28 object-contain flex-shrink-0"
+                  initial={{ rotate: -10 }}
+                  animate={{ rotate: [0, -5, 5, 0] }}
+                  transition={{ duration: 0.6 }}
+                />
+                <div className="flex-1 pt-1">
+                  <p className="text-xs font-bold uppercase tracking-wide mb-1" style={{ color: activeFact.color }}>
+                    {activeFact.character} says:
+                  </p>
+                  <p className="text-base md:text-lg font-bold leading-snug" style={{ color: 'var(--jma-dark)' }}>
+                    {activeFact.text}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between mt-5 pt-4 border-t-2 border-dashed border-gray-200">
+                <button
+                  data-testid="fact-modal-another"
+                  onClick={() => showFact(activeFact.character)}
+                  className="chunky-btn text-white px-4 py-1.5 text-sm font-bold"
+                  style={{ backgroundColor: activeFact.color }}
+                >
+                  Tell me another!
+                </button>
+                <button
+                  data-testid="fact-modal-got-it"
+                  onClick={closeFact}
+                  className="chunky-btn bg-white px-4 py-1.5 text-sm font-bold border-[var(--jma-dark)]"
+                  style={{ color: 'var(--jma-dark)' }}
+                >
+                  Cool!
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Game Mode Cards */}
       <div className="w-full max-w-3xl z-10">

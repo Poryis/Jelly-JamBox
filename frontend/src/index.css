@@ -146,12 +146,19 @@ h1, h2, h3, h4, h5, h6 {
   align-items: flex-end;
   gap: 8px;
   padding: 16px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 @media (min-width: 768px) {
   .bell-row {
-    gap: 12px;
+    gap: 10px;
+    padding: 20px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .bell-row {
+    gap: 16px;
     padding: 24px;
   }
 }
@@ -178,8 +185,8 @@ h1, h2, h3, h4, h5, h6 {
 .rhythm-lanes {
   display: flex;
   position: relative;
-  height: 70vh;
-  max-height: 500px;
+  height: 100%;
+  min-height: 520px;
   background: linear-gradient(to bottom, #f0f9ff 0%, #e0f7fa 100%);
 }
 

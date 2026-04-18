@@ -83,25 +83,85 @@ function CharacterReaction({ streak }) {
 }
 
 // ============================================================================
-// PlayableBell: BOTH frames rendered in DOM, stacked absolutely. Pressed frame
-// starts hidden (display:none). Press/release just toggles `display` on the
-// pressed frame - zero network, zero decode, zero React render - INSTANT.
+// BellSemicircle: Arranges the 8 bells in a fun upward-curving arc.
+// Position each bell along a semicircle arc, lower notes at ends, higher toward top.
+// Actually simpler: keep left-to-right tonal order but place each bell along
+// an arc so the row has a gentle "smile" shape (ends dip down).
 // ============================================================================
+function BellSemicircle({ onDown, onUp, nextGuidedNote, registerRef }) {
+  // Arc: 8 bells across 180deg. Bell 0 at angle=180, bell 7 at angle=0.
+  // Use responsive radius via CSS vars.
+  const n = BELLS.length;
+  return (
+    <div
+      className="relative w-full"
+      style={{
+        height: 'var(--bell-arc-h, 380px)',
+        maxWidth: '1200px',
+      }}
+      data-testid="jelly-bells-row"
+    >
+      {/* Decorative arc stave line */}
+      <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 1000 380" preserveAspectRatio="none">
+        <path d="M 80 300 Q 500 110 920 300" stroke="rgba(10,37,64,0.12)" strokeWidth="4" strokeDasharray="6 10" fill="none" strokeLinecap="round" />
+      </svg>
+      {BELLS.map((bell, i) => {
+        // angle: 0 = rightmost, 180 = leftmost. distribute across arc.
+        // Use 170 to 10 deg so ends aren't touching container edges.
+        const angle = 170 - (i * (160 / (n - 1)));
+        const rad = (angle * Math.PI) / 180;
+        // Container is 1000 wide, 380 tall in viewBox terms; convert to percentages
+        const cx = 50; // center x%
+        const cy = 78; // base pivot y%
+        const rx = 44; // horizontal radius %
+        const ry = 48; // vertical radius % (gentle rainbow arc, not too steep)
+        const x = cx + rx * Math.cos(rad);
+        const y = cy - ry * Math.sin(rad);
+        return (
+          <div
+            key={bell.note}
+            className="absolute flex flex-col items-center"
+            style={{
+              left: `${x}%`,
+              top: `${y}%`,
+              transform: 'translate(-50%, -50%)',
+              zIndex: 10 + i,
+            }}
+          >
+            <PlayableBell
+              bell={bell}
+              onDown={onDown}
+              onUp={onUp}
+              isHighlighted={nextGuidedNote === bell.note}
+              registerRef={registerRef}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+// Toggling: on press we HIDE idle and SHOW pressed (display swap on both).
+// This prevents transparent images from bleeding through each other.
+// Zero network, zero decode, zero React render - INSTANT.
 function PlayableBell({ bell, onDown, onUp, isHighlighted, registerRef }) {
+  const idleRef = useRef(null);
   const pressedRef = useRef(null);
 
   useEffect(() => {
-    if (registerRef) registerRef(bell.note, pressedRef);
+    if (registerRef) registerRef(bell.note, { idleRef, pressedRef });
     return () => { if (registerRef) registerRef(bell.note, null); };
   }, [bell.note, registerRef]);
 
   const doDown = (e) => {
     if (e && e.preventDefault) e.preventDefault();
+    if (idleRef.current) idleRef.current.style.display = 'none';
     if (pressedRef.current) pressedRef.current.style.display = 'block';
     onDown(bell.note);
   };
   const doUp = () => {
     if (pressedRef.current) pressedRef.current.style.display = 'none';
+    if (idleRef.current) idleRef.current.style.display = 'block';
     onUp(bell.note);
   };
 
@@ -116,28 +176,27 @@ function PlayableBell({ bell, onDown, onUp, isHighlighted, registerRef }) {
         onPointerCancel={doUp}
         style={{ touchAction: 'none' }}
       >
-        {/* Idle frame */}
         <img
+          ref={idleRef}
           src={bell.image1}
           alt={bell.solfege}
-          className="w-24 h-28 md:w-32 md:h-36 object-contain pointer-events-none"
+          className="w-20 h-24 md:w-28 md:h-32 object-contain pointer-events-none"
           draggable={false}
         />
-        {/* Pressed frame - stacked over idle, hidden by default */}
         <img
           ref={pressedRef}
           src={bell.image2}
           alt=""
           aria-hidden="true"
-          className="w-24 h-28 md:w-32 md:h-36 object-contain pointer-events-none absolute top-0 left-0"
+          className="w-20 h-24 md:w-28 md:h-32 object-contain pointer-events-none absolute top-0 left-0"
           draggable={false}
           style={{ display: 'none' }}
         />
-        <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-white border-2 border-[var(--jma-dark)] flex items-center justify-center text-xs font-bold pointer-events-none"
+        <div className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-white border-2 border-[var(--jma-dark)] flex items-center justify-center text-sm font-bold pointer-events-none"
           style={{ color: bell.color }}>{bell.key}</div>
       </div>
       <div className="bell-note-label text-center">
-        <span style={{ color: bell.color }}>{bell.solfege}</span>
+        <span className="text-lg md:text-xl font-bold" style={{ color: bell.color }}>{bell.solfege}</span>
         <span className="block text-xs opacity-70">({bell.note})</span>
       </div>
     </div>
@@ -145,33 +204,35 @@ function PlayableBell({ bell, onDown, onUp, isHighlighted, registerRef }) {
 }
 
 // ============================================================================
-// Drum piece with dual-frame stacked approach. Same principle.
+// Drum piece with dual-frame stacked approach. Toggles BOTH frames.
 // ============================================================================
 function PlayableDrumPiece({ drumId, info, onDown, onUp, style, registerRef }) {
+  const idleRef = useRef(null);
   const pressedRef = useRef(null);
 
   useEffect(() => {
-    if (registerRef) registerRef(drumId, pressedRef);
+    if (registerRef) registerRef(drumId, { idleRef, pressedRef });
     return () => { if (registerRef) registerRef(drumId, null); };
   }, [drumId, registerRef]);
 
   const doDown = (e) => {
     if (e && e.preventDefault) e.preventDefault();
+    if (idleRef.current) idleRef.current.style.display = 'none';
     if (pressedRef.current) pressedRef.current.style.display = 'block';
     onDown(drumId);
   };
   const doUp = () => {
     if (pressedRef.current) pressedRef.current.style.display = 'none';
+    if (idleRef.current) idleRef.current.style.display = 'block';
     onUp(drumId);
   };
 
-  // Strip custom badge props so they don't land on <img>
   const { badgeLeft, badgeBottom, ...imgStyle } = style || {};
 
   return (
     <>
-      {/* Idle frame */}
       <img
+        ref={idleRef}
         src={info.img1}
         alt={info.label}
         className="absolute object-contain cursor-pointer"
@@ -182,7 +243,6 @@ function PlayableDrumPiece({ drumId, info, onDown, onUp, style, registerRef }) {
         onPointerCancel={doUp}
         draggable={false}
       />
-      {/* Pressed frame - exact same position, hidden by default */}
       <img
         ref={pressedRef}
         src={info.img2}
@@ -192,32 +252,37 @@ function PlayableDrumPiece({ drumId, info, onDown, onUp, style, registerRef }) {
         style={{ ...imgStyle, display: 'none', touchAction: 'none' }}
         draggable={false}
       />
-      <div className="absolute text-[10px] font-bold bg-white/80 rounded-full w-5 h-5 flex items-center justify-center border border-[var(--jma-dark)] pointer-events-none"
+      <div className="absolute text-xs font-bold bg-white/80 rounded-full w-6 h-6 flex items-center justify-center border border-[var(--jma-dark)] pointer-events-none"
         style={{ left: badgeLeft, bottom: badgeBottom, zIndex: 10, color: info.color }}>{info.key}</div>
     </>
   );
 }
 
 function DrumKitPlayable({ onDrumDown, onDrumUp, registerDrumRef }) {
+  // Larger drum kit - fills the game board. Scale 1.4x from previous layout.
+  const S = 1.4;
+  const px = (n) => `${Math.round(n * S)}px`;
   return (
-    <div className="relative mx-auto" style={{ width: '500px', height: '320px' }}>
+    <div className="relative mx-auto" style={{ width: px(500), height: px(320) }}>
+      {/* Crash: moved down (170→120) and in (70→120) */}
       <PlayableDrumPiece drumId="crash"  info={DRUM_INFO.crash}  onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
-        style={{ left: '70px',  bottom: '170px', height: '130px', zIndex: 1, badgeLeft: '118px', badgeBottom: '168px' }} />
+        style={{ left: px(120), bottom: px(120), height: px(130), zIndex: 1, badgeLeft: px(168), badgeBottom: px(118) }} />
+      {/* Ride: moved down (150→100) and in (320→270) */}
       <PlayableDrumPiece drumId="ride"   info={DRUM_INFO.ride}   onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
-        style={{ left: '320px', bottom: '150px', height: '160px', zIndex: 1, badgeLeft: '385px', badgeBottom: '148px' }} />
+        style={{ left: px(270), bottom: px(100), height: px(160), zIndex: 1, badgeLeft: px(335), badgeBottom: px(98)  }} />
       <PlayableDrumPiece drumId="hihat"  info={DRUM_INFO.hihat}  onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
-        style={{ left: '0px',   bottom: '25px',  height: '210px', zIndex: 3, badgeLeft: '30px',  badgeBottom: '23px'  }} />
+        style={{ left: px(0),   bottom: px(25),  height: px(210), zIndex: 3, badgeLeft: px(30),  badgeBottom: px(23)  }} />
       <PlayableDrumPiece drumId="kick"   info={DRUM_INFO.kick}   onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
-        style={{ left: '155px', bottom: '0px',   width: '185px',  zIndex: 3, badgeLeft: '240px', badgeBottom: '-2px'  }} />
+        style={{ left: px(155), bottom: px(0),   width: px(185),  zIndex: 4, badgeLeft: px(240), badgeBottom: px(-2)  }} />
       <PlayableDrumPiece drumId="lowTom" info={DRUM_INFO.lowTom} onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
-        style={{ left: '140px', bottom: '155px', width: '90px',   zIndex: 3, badgeLeft: '178px', badgeBottom: '153px' }} />
-      {/* Toms T-bar base (static decoration) */}
+        style={{ left: px(140), bottom: px(155), width: px(90),   zIndex: 3, badgeLeft: px(178), badgeBottom: px(153) }} />
       <img src="/assets/drums/toms-base.png" alt="Toms base" className="absolute object-contain pointer-events-none"
-        style={{ left: '215px', bottom: '143px', width: '50px', zIndex: 4 }} />
+        style={{ left: px(215), bottom: px(143), width: px(50), zIndex: 4 }} />
       <PlayableDrumPiece drumId="tom"    info={DRUM_INFO.tom}    onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
-        style={{ left: '252px', bottom: '158px', width: '78px',   zIndex: 5, badgeLeft: '284px', badgeBottom: '156px' }} />
+        style={{ left: px(252), bottom: px(158), width: px(78),   zIndex: 5, badgeLeft: px(284), badgeBottom: px(156) }} />
+      {/* Snare: scaled 10% down (110 → 99) */}
       <PlayableDrumPiece drumId="snare"  info={DRUM_INFO.snare}  onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
-        style={{ left: '80px',  bottom: '12px',  width: '110px',  zIndex: 6, badgeLeft: '128px', badgeBottom: '10px'  }} />
+        style={{ left: px(85),  bottom: px(12),  width: px(99),   zIndex: 6, badgeLeft: px(123), badgeBottom: px(10)  }} />
     </div>
   );
 }
@@ -319,34 +384,37 @@ function FreePlayPage() {
 
   const onDrumUp = useCallback(() => {}, []);
 
-  // Keyboard: imperatively toggle the pre-rendered pressed frame via refs
+  // Keyboard: imperatively toggle pre-rendered frames via refs (idle + pressed)
   useEffect(() => {
     const pressedBells = new Set();
     const pressedDrums = new Set();
+
+    const showPressed = (refs) => {
+      if (!refs) return;
+      if (refs.idleRef && refs.idleRef.current) refs.idleRef.current.style.display = 'none';
+      if (refs.pressedRef && refs.pressedRef.current) refs.pressedRef.current.style.display = 'block';
+    };
+    const showIdle = (refs) => {
+      if (!refs) return;
+      if (refs.pressedRef && refs.pressedRef.current) refs.pressedRef.current.style.display = 'none';
+      if (refs.idleRef && refs.idleRef.current) refs.idleRef.current.style.display = 'block';
+    };
 
     const down = (e) => {
       const key = e.key.toLowerCase();
       const bellNote = KEY_TO_NOTE[e.key];
       if (bellNote && !pressedBells.has(bellNote)) {
         pressedBells.add(bellNote);
-        if (activeTab === 'bells') {
-          const r = bellRefsRef.current[bellNote];
-          if (r && r.current) r.current.style.display = 'block';
-        } else if (activeTab === 'xylophone' && xyloRef.current) {
-          xyloRef.current.press(bellNote);
-        } else if (activeTab === 'piano' && pianoRef.current) {
-          pianoRef.current.press(bellNote);
-        }
+        if (activeTab === 'bells') showPressed(bellRefsRef.current[bellNote]);
+        else if (activeTab === 'xylophone' && xyloRef.current) xyloRef.current.press(bellNote);
+        else if (activeTab === 'piano' && pianoRef.current) pianoRef.current.press(bellNote);
         onBellDown(bellNote);
         return;
       }
       const drumId = DRUM_KEY_MAP[key];
       if (drumId && !pressedDrums.has(drumId)) {
         pressedDrums.add(drumId);
-        if (activeTab === 'drums') {
-          const r = drumRefsRef.current[drumId];
-          if (r && r.current) r.current.style.display = 'block';
-        }
+        if (activeTab === 'drums') showPressed(drumRefsRef.current[drumId]);
         onDrumDown(drumId);
       }
     };
@@ -355,23 +423,15 @@ function FreePlayPage() {
       const bellNote = KEY_TO_NOTE[e.key];
       if (bellNote) {
         pressedBells.delete(bellNote);
-        if (activeTab === 'bells') {
-          const r = bellRefsRef.current[bellNote];
-          if (r && r.current) r.current.style.display = 'none';
-        } else if (activeTab === 'xylophone' && xyloRef.current) {
-          xyloRef.current.release(bellNote);
-        } else if (activeTab === 'piano' && pianoRef.current) {
-          pianoRef.current.release(bellNote);
-        }
+        if (activeTab === 'bells') showIdle(bellRefsRef.current[bellNote]);
+        else if (activeTab === 'xylophone' && xyloRef.current) xyloRef.current.release(bellNote);
+        else if (activeTab === 'piano' && pianoRef.current) pianoRef.current.release(bellNote);
         onBellUp(bellNote);
       }
       const drumId = DRUM_KEY_MAP[key];
       if (drumId) {
         pressedDrums.delete(drumId);
-        if (activeTab === 'drums') {
-          const r = drumRefsRef.current[drumId];
-          if (r && r.current) r.current.style.display = 'none';
-        }
+        if (activeTab === 'drums') showIdle(drumRefsRef.current[drumId]);
         onDrumUp(drumId);
       }
     };
@@ -385,18 +445,26 @@ function FreePlayPage() {
   const startRecording = useCallback(() => { setRecording([]); setIsRecording(true); recordStartRef.current = Date.now(); }, []);
   const stopRecording = useCallback(() => setIsRecording(false), []);
 
-  // Helper to briefly flash the pressed frame for playback (toggles display)
+  // Helper to briefly flash the pressed frame for playback (toggles both refs)
   const flashBell = useCallback((note, ms = 120) => {
-    const r = bellRefsRef.current[note];
-    if (!r || !r.current) return;
-    r.current.style.display = 'block';
-    setTimeout(() => { if (r.current) r.current.style.display = 'none'; }, ms);
+    const refs = bellRefsRef.current[note];
+    if (!refs) return;
+    if (refs.idleRef && refs.idleRef.current) refs.idleRef.current.style.display = 'none';
+    if (refs.pressedRef && refs.pressedRef.current) refs.pressedRef.current.style.display = 'block';
+    setTimeout(() => {
+      if (refs.pressedRef && refs.pressedRef.current) refs.pressedRef.current.style.display = 'none';
+      if (refs.idleRef && refs.idleRef.current) refs.idleRef.current.style.display = 'block';
+    }, ms);
   }, []);
   const flashDrum = useCallback((drumId, ms = 120) => {
-    const r = drumRefsRef.current[drumId];
-    if (!r || !r.current) return;
-    r.current.style.display = 'block';
-    setTimeout(() => { if (r.current) r.current.style.display = 'none'; }, ms);
+    const refs = drumRefsRef.current[drumId];
+    if (!refs) return;
+    if (refs.idleRef && refs.idleRef.current) refs.idleRef.current.style.display = 'none';
+    if (refs.pressedRef && refs.pressedRef.current) refs.pressedRef.current.style.display = 'block';
+    setTimeout(() => {
+      if (refs.pressedRef && refs.pressedRef.current) refs.pressedRef.current.style.display = 'none';
+      if (refs.idleRef && refs.idleRef.current) refs.idleRef.current.style.display = 'block';
+    }, ms);
   }, []);
 
   const playBack = useCallback(() => {
@@ -430,16 +498,16 @@ function FreePlayPage() {
           animate={{ y: [0, -6, 0] }} transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }} />
       </motion.div>
 
-      <main className="flex-1 flex flex-col items-center justify-center pt-16 pb-6 px-4">
-        <div className="flex flex-wrap items-center justify-center gap-2 mb-3">
-          <div className="game-card px-3 py-2 flex items-center gap-1">
+      <main className="flex-1 flex flex-col items-center justify-start pt-14 pb-2 px-2">
+        <div className="flex flex-wrap items-center justify-center gap-2 mb-2">
+          <div className="game-card px-2 py-1 flex items-center gap-1">
             {INSTRUMENT_TABS.map(tab => (
               <button key={tab.id} data-testid={`sound-mode-${tab.id}`}
                 className={`px-2 py-1 rounded-lg text-xs font-bold border-2 transition-all ${activeTab === tab.id ? 'bg-[var(--jma-dark)] text-white border-[var(--jma-dark)]' : 'bg-white border-gray-300'}`}
                 onClick={() => setActiveTab(tab.id)}>{tab.label}</button>
             ))}
           </div>
-          <div className="game-card px-3 py-2 flex items-center gap-2">
+          <div className="game-card px-2 py-1 flex items-center gap-2">
             {!isRecording ? (
               <button data-testid="record-btn" className="chunky-btn bg-[var(--jma-red)] text-white px-3 py-1 flex items-center gap-1 text-xs font-bold" onClick={startRecording}>
                 <Circle className="w-3 h-3 fill-current" /> REC</button>
@@ -454,7 +522,7 @@ function FreePlayPage() {
             )}
           </div>
           {!isDrumTab && (
-            <div className="game-card px-3 py-2">
+            <div className="game-card px-2 py-1">
               <button data-testid="guided-toggle" className={`chunky-btn px-3 py-1 text-xs font-bold ${guidedMode ? 'bg-[var(--jma-blue)] text-white' : 'bg-white'}`}
                 onClick={() => setGuidedMode(!guidedMode)}>
                 <Music className="inline w-3 h-3 mr-1" /> {guidedMode ? 'Guided ON' : 'Learn a Song'}</button>
@@ -463,7 +531,7 @@ function FreePlayPage() {
         </div>
 
         {guidedMode && !isDrumTab && (
-          <motion.div className="game-card px-4 py-2 mb-3 flex items-center gap-3" initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
+          <motion.div className="game-card px-3 py-1 mb-2 flex items-center gap-3" initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
             <button onClick={() => { setGuidedSongIdx(i => Math.max(0, i - 1)); setGuidedStep(0); }}><ChevronRight className="w-4 h-4 rotate-180" /></button>
             <div className="text-center">
               <p className="text-sm font-bold font-display" style={{ color: 'var(--jma-dark)' }}>{currentGuidedSong?.name}</p>
@@ -475,19 +543,20 @@ function FreePlayPage() {
         )}
 
         {lastNote && !isDrumTab && (
-          <motion.div key={lastNote + streak} initial={{ scale: 0.8 }} animate={{ scale: 1 }} className="mb-2">
+          <motion.div key={lastNote + streak} initial={{ scale: 0.8 }} animate={{ scale: 1 }} className="mb-1">
             <NotationDisplay currentNote={`${lastNote} (${noteToSolfege[lastNote] || lastNote})`} />
           </motion.div>
         )}
 
         {isDrumTab ? (
-          <motion.div className="game-board p-4 md:p-6" initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
+          <motion.div className="game-board p-4 md:p-6 w-[95vw] max-w-[1200px] flex items-center justify-center"
+            initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
             <DrumKitPlayable onDrumDown={onDrumDown} onDrumUp={onDrumUp} registerDrumRef={registerDrumRef} />
           </motion.div>
         ) : (
           <>
             {playedNotes.length > 0 && (
-              <div className="flex gap-1.5 mb-3 flex-wrap justify-center max-w-lg">
+              <div className="flex gap-1 mb-2 flex-wrap justify-center max-w-xl">
                 {playedNotes.map((note, idx) => (
                   <motion.span key={`${note}-${idx}`} initial={{ scale: 0, y: -10 }} animate={{ scale: 1, y: 0 }}
                     className="px-2 py-0.5 rounded-full text-xs font-bold text-white border-2 border-[var(--jma-dark)]"
@@ -495,23 +564,16 @@ function FreePlayPage() {
                 ))}
               </div>
             )}
-            <motion.div className="game-board p-3 md:p-6" initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
-              {activeTab === 'bells' && (
-                <div className="bell-row" data-testid="jelly-bells-row">
-                  {BELLS.map(bell => (
-                    <PlayableBell key={bell.note} bell={bell} onDown={onBellDown} onUp={onBellUp}
-                      isHighlighted={nextGuidedNote === bell.note} registerRef={registerBellRef} />
-                  ))}
-                </div>
-              )}
+            <motion.div className="game-board p-3 md:p-5 w-[95vw] max-w-[1400px] flex items-center justify-center min-h-[420px] md:min-h-[480px]" initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
+              {activeTab === 'bells' && <BellSemicircle onDown={onBellDown} onUp={onBellUp} nextGuidedNote={nextGuidedNote} registerRef={registerBellRef} />}
               {activeTab === 'xylophone' && <XylophoneInstrument ref={xyloRef} onPlayNote={onBellDown} onNoteUp={onBellUp} highlightedNote={nextGuidedNote} />}
               {activeTab === 'piano' && <PianoInstrument ref={pianoRef} onPlayNote={onBellDown} onNoteUp={onBellUp} highlightedNote={nextGuidedNote} />}
             </motion.div>
           </>
         )}
 
-        <motion.div className="mt-3 max-w-md text-center game-card px-4 py-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
-          <p className="text-sm font-medium" style={{ color: 'var(--jma-dark)' }}>
+        <motion.div className="mt-2 max-w-md text-center game-card px-3 py-1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
+          <p className="text-xs font-medium" style={{ color: 'var(--jma-dark)' }}>
             <span className="font-bold">Controls:</span>{' '}
             {isDrumTab ? 'Q=Hi-Hat  W=Crash  E=Ride  A=Snare  S=Tom1  D=Tom2  X=Kick' : 'Bells: keys 1-8 | Drums always: Q W E A S D X'}
           </p>
