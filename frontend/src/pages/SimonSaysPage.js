@@ -24,7 +24,7 @@ function SimonSaysPage({ score, setScore, gameStats, setGameStats, resetGame }) 
   const navigate = useNavigate();
   const { playBellNote, playFeedbackSound, initAudioContext } = useAudio();
 
-  const [gameState, setGameState] = useState('ready'); // ready, showing, playing, success, fail, finished
+  const [gameState, setGameState] = useState('ready');
   const [level, setLevel] = useState(1);
   const [showingIndex, setShowingIndex] = useState(-1);
   const [playerIndex, setPlayerIndex] = useState(0);
@@ -33,6 +33,7 @@ function SimonSaysPage({ score, setScore, gameStats, setGameStats, resetGame }) 
   const [message, setMessage] = useState('Watch and listen!');
 
   const timeoutRef = useRef(null);
+  const bellsRowRef = useRef(null); // Imperative handle to flash bells instantly
   const currentPattern = PATTERNS[level] || PATTERNS[8];
 
   // Clean up timeouts
@@ -68,6 +69,8 @@ function SimonSaysPage({ score, setScore, gameStats, setGameStats, resetGame }) 
     const note = currentPattern[showingIndex];
     setHighlightedNote(note);
     playBellNote(note);
+    // Imperative visual swap for Simon's demo - bypasses React state delay
+    if (bellsRowRef.current) bellsRowRef.current.flashNote(note, 500);
 
     timeoutRef.current = setTimeout(() => {
       setHighlightedNote(null);
@@ -303,6 +306,7 @@ function SimonSaysPage({ score, setScore, gameStats, setGameStats, resetGame }) 
           animate={{ y: 0, opacity: 1 }}
         >
           <JellyBellsRow 
+            ref={bellsRowRef}
             onPlayNote={handlePlayNote}
             onNoteUp={() => {}}
             highlightedNote={highlightedNote}

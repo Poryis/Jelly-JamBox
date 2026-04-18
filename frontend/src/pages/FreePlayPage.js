@@ -287,37 +287,34 @@ function PlayableDrumPiece({ drumId, info, onDown, onUp, style, registerRef }) {
 }
 
 function DrumKitPlayable({ onDrumDown, onDrumUp, registerDrumRef }) {
-  // Bigger drum kit with offset to center properly. Scale 1.85x
-  const S = 1.85;
+  // Drum kit scale - sized to fit game board
+  const S = 1.65;
   const px = (n) => `${Math.round(n * S)}px`;
   const cymS = 1.1;
-  // Shift the whole kit RIGHT by adding offset to every left position
-  const RIGHT_SHIFT = 100; // unscaled px, shifts the whole kit right
+  // Shift the whole kit RIGHT by this many unscaled px
+  const RIGHT_SHIFT = 80;
   const L = (n) => px(n + RIGHT_SHIFT);
-
-  // Toms group: move both toms + base together to sit on kick.
-  // Kick is at left=155 bottom=0, width=185. Kick top edge ~= 185*(height/width ratio)
-  // Toms should perch on top of kick.
-  const TOMS_DX = 15;   // shift toms group right
-  const TOMS_DY = -20;  // shift toms group down (sitting lower on kick)
+  // Toms group: move together up and slightly right
+  const TOMS_DX = 15;
+  const TOMS_DY = -70;  // moved way UP relative to other drums
 
   return (
-    <div className="relative mx-auto" style={{ width: px(500 + RIGHT_SHIFT + 40), height: px(360) }}>
+    <div className="relative mx-auto" style={{ width: px(500 + RIGHT_SHIFT + 30), height: px(340) }}>
       <PlayableDrumPiece drumId="crash"  info={DRUM_INFO.crash}  onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
-        style={{ left: L(90),  bottom: px(175), height: `${Math.round(130 * S * cymS)}px`, zIndex: 1, badgeLeft: L(145), badgeBottom: px(173) }} />
+        style={{ left: L(90),  bottom: px(155), height: `${Math.round(130 * S * cymS)}px`, zIndex: 1, badgeLeft: L(145), badgeBottom: px(153) }} />
       <PlayableDrumPiece drumId="ride"   info={DRUM_INFO.ride}   onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
-        style={{ left: L(305), bottom: px(155), height: `${Math.round(160 * S * cymS)}px`, zIndex: 1, badgeLeft: L(380), badgeBottom: px(153) }} />
+        style={{ left: L(305), bottom: px(135), height: `${Math.round(160 * S * cymS)}px`, zIndex: 1, badgeLeft: L(380), badgeBottom: px(133) }} />
       <PlayableDrumPiece drumId="hihat"  info={DRUM_INFO.hihat}  onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
         style={{ left: L(0),   bottom: px(25),  height: px(210), zIndex: 3, badgeLeft: L(30),  badgeBottom: px(23)  }} />
       <PlayableDrumPiece drumId="kick"   info={DRUM_INFO.kick}   onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
         style={{ left: L(155), bottom: px(0),   width: px(185),  zIndex: 4, badgeLeft: L(240), badgeBottom: px(-2)  }} />
-      {/* Toms group: moved together to sit on kick */}
+      {/* Toms group: moved way up and slightly right, sit on top of kick */}
       <PlayableDrumPiece drumId="lowTom" info={DRUM_INFO.lowTom} onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
-        style={{ left: L(140 + TOMS_DX), bottom: px(155 + TOMS_DY), width: px(90), zIndex: 5, badgeLeft: L(178 + TOMS_DX), badgeBottom: px(153 + TOMS_DY) }} />
+        style={{ left: L(140 + TOMS_DX), bottom: px(155 + TOMS_DY * -1), width: px(90), zIndex: 5, badgeLeft: L(178 + TOMS_DX), badgeBottom: px(153 + TOMS_DY * -1) }} />
       <img src="/assets/drums/toms-base.png" alt="Toms base" className="absolute object-contain pointer-events-none"
-        style={{ left: L(215 + TOMS_DX), bottom: px(143 + TOMS_DY), width: px(50), zIndex: 6 }} />
+        style={{ left: L(215 + TOMS_DX), bottom: px(143 + TOMS_DY * -1), width: px(50), zIndex: 6 }} />
       <PlayableDrumPiece drumId="tom"    info={DRUM_INFO.tom}    onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
-        style={{ left: L(252 + TOMS_DX), bottom: px(158 + TOMS_DY), width: px(78), zIndex: 7, badgeLeft: L(284 + TOMS_DX), badgeBottom: px(156 + TOMS_DY) }} />
+        style={{ left: L(252 + TOMS_DX), bottom: px(158 + TOMS_DY * -1), width: px(78), zIndex: 7, badgeLeft: L(284 + TOMS_DX), badgeBottom: px(156 + TOMS_DY * -1) }} />
       <PlayableDrumPiece drumId="snare"  info={DRUM_INFO.snare}  onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
         style={{ left: L(85),  bottom: px(12),  width: px(99),   zIndex: 8, badgeLeft: L(123), badgeBottom: px(10)  }} />
     </div>

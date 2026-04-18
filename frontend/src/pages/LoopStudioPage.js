@@ -2,25 +2,16 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Play, Square, Trash2, Plus, Minus, Volume2 } from 'lucide-react';
-import { BELLS } from '../components/JellyBells';
 import { GameHeader } from '../components/GameUI';
 import { PageCharacters } from '../components/PageCharacters';
 import { FullscreenButton } from '../components/FullscreenButton';
-import { DrumKitVisual, BellsVisual, TurntableVisual } from '../components/Instruments';
+import { DrumKitVisual, TurntableVisual } from '../components/Instruments';
 import useAudio from '../hooks/useAudio';
 
 const DEFAULT_BPM = 100;
 
-// Available tracks with instruments
+// Available tracks - drums + scratch only (bells removed per user request)
 const TRACK_PRESETS = [
-  { id: 'bells_C', label: 'Do (C)', type: 'bell', note: 'C', color: '#FF3B30' },
-  { id: 'bells_D', label: 'Re (D)', type: 'bell', note: 'D', color: '#FF9500' },
-  { id: 'bells_E', label: 'Mi (E)', type: 'bell', note: 'E', color: '#FFCC00' },
-  { id: 'bells_F', label: 'Fa (F)', type: 'bell', note: 'F', color: '#4CD964' },
-  { id: 'bells_G', label: 'So (G)', type: 'bell', note: 'G', color: '#34A853' },
-  { id: 'bells_A', label: 'La (A)', type: 'bell', note: 'A', color: '#4285F4' },
-  { id: 'bells_B', label: 'Ti (B)', type: 'bell', note: 'B', color: '#AF52DE' },
-  { id: 'bells_HC', label: 'Do (Hi)', type: 'bell', note: 'High C', color: '#FF2D55' },
   { id: 'drum_kick', label: 'Kick', type: 'drum', note: 'kick', color: '#E74C3C' },
   { id: 'drum_snare', label: 'Snare', type: 'drum', note: 'snare', color: '#3498DB' },
   { id: 'drum_hihat', label: 'Hi-Hat', type: 'drum', note: 'hihat', color: '#F1C40F' },
@@ -30,7 +21,7 @@ const TRACK_PRESETS = [
   { id: 'scratch_pp', label: 'Scratch P/P', type: 'scratch', note: 'scratchPushPull', color: '#2ECC71' },
 ];
 
-// More presets - melodic ones that work together!
+// Drum + scratch patterns (bells removed)
 const LOOP_PRESETS = {
   'Basic Beat': {
     drum_kick:  [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],
@@ -48,50 +39,11 @@ const LOOP_PRESETS = {
     drum_hihat: [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0],
     drum_crash: [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
   },
-  'Do-Mi-So': {
-    bells_C:    [1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0],
-    bells_E:    [0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0],
-    bells_G:    [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],
-  },
-  'Scale Up': {
-    bells_C:    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    bells_D:    [0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    bells_E:    [0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0],
-    bells_F:    [0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0],
-    bells_G:    [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0],
-    bells_A:    [0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0],
-    bells_B:    [0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0],
-    bells_HC:   [0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0],
-  },
-  'Arpeggio': {
-    bells_C:    [1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0],
-    bells_E:    [0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0],
-    bells_G:    [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],
-    bells_HC:   [0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0],
-  },
-  'Waltz Feel': {
-    bells_C:    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    bells_E:    [0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0],
-    bells_G:    [0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0],
-    drum_kick:  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    drum_hihat: [0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],
-  },
-  'Happy Song': {
-    bells_C:    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    bells_D:    [0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0],
-    bells_E:    [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0],
-    bells_C:    [1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0],
-    bells_F:    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0],
+  'DJ Scratch': {
     drum_kick:  [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],
-    drum_snare: [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0],
-  },
-  'Jelly Jam': {
-    bells_G:    [1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0],
-    bells_E:    [0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0],
-    bells_C:    [0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0],
-    drum_kick:  [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],
-    drum_hihat: [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0],
-    drum_snare: [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],
+    drum_hihat: [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1],
+    scratch_pull: [0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0],
+    scratch_push: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0],
   },
   'Scratch Mix': {
     drum_kick:     [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],
@@ -110,7 +62,7 @@ const MEASURE_OPTIONS = [
 
 function LoopStudioPage() {
   const navigate = useNavigate();
-  const { playBellNote, playDrumSound, initAudioContext } = useAudio();
+  const { playDrumSound, initAudioContext } = useAudio();
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentStep, setCurrentStep] = useState(-1);
@@ -126,9 +78,8 @@ function LoopStudioPage() {
   const gridRef = useRef(grid);
   const mutedRef = useRef(mutedTracks);
   const totalStepsRef = useRef(totalSteps);
-  // Imperative handles for drum kit and bells visuals (instant frame swap, no state)
+  // Imperative handle for drum kit visual (instant frame swap, no state)
   const drumKitRef = useRef(null);
-  const bellsVisualRef = useRef(null);
 
   useEffect(() => { gridRef.current = grid; }, [grid]);
   useEffect(() => { mutedRef.current = mutedTracks; }, [mutedTracks]);
@@ -159,21 +110,19 @@ function LoopStudioPage() {
       if (!wasActive) {
         initAudioContext();
         const preset = TRACK_PRESETS.find(p => p.id === trackId);
-        if (preset?.type === 'bell') playBellNote(preset.note);
-        else if (preset?.type === 'drum' || preset?.type === 'scratch') playDrumSound(preset.note);
+        if (preset?.type === 'drum' || preset?.type === 'scratch') playDrumSound(preset.note);
       }
       return newGrid;
     });
-  }, [totalSteps, initAudioContext, playBellNote, playDrumSound]);
+  }, [totalSteps, initAudioContext, playDrumSound]);
 
   // Play a sound for preview
   const previewSound = useCallback((trackId) => {
     initAudioContext();
     const preset = TRACK_PRESETS.find(p => p.id === trackId);
     if (!preset) return;
-    if (preset.type === 'bell') playBellNote(preset.note);
-    else playDrumSound(preset.note);
-  }, [initAudioContext, playBellNote, playDrumSound]);
+    playDrumSound(preset.note);
+  }, [initAudioContext, playDrumSound]);
 
   const playStep = useCallback((step) => {
     const currentGrid = gridRef.current;
@@ -183,12 +132,7 @@ function LoopStudioPage() {
       if (muted.has(trackId)) return;
       if (steps[step]) {
         const preset = TRACK_PRESETS.find(p => p.id === trackId);
-        if (preset?.type === 'bell') {
-          playBellNote(preset.note);
-          // Imperative flash - bypasses React state entirely for instant frame swap
-          if (bellsVisualRef.current) bellsVisualRef.current.flash(preset.note);
-        }
-        else if (preset?.type === 'drum') {
+        if (preset?.type === 'drum') {
           playDrumSound(preset.note);
           if (drumKitRef.current) drumKitRef.current.flash(preset.note);
         }
@@ -201,7 +145,7 @@ function LoopStudioPage() {
     // Scratch hits still use state because the turntable records animate continuously
     setActiveHits(scratchHits);
     setTimeout(() => { setActiveHits(new Set()); }, 100);
-  }, [playBellNote, playDrumSound]);
+  }, [playDrumSound]);
 
   const togglePlay = useCallback(() => {
     initAudioContext();
@@ -471,10 +415,6 @@ function LoopStudioPage() {
           <div className="flex-shrink-0">
             <TurntableVisual activeHits={activeHits} />
           </div>
-        </div>
-        {/* Bells fixed to bottom of page, centered */}
-        <div className="fixed bottom-2 left-1/2 -translate-x-1/2 z-20">
-          <BellsVisual ref={bellsVisualRef} />
         </div>
       </main>
       <PageCharacters page="loop-studio" />

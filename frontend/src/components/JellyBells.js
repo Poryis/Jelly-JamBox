@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useImperativeHandle, useRef, forwardRef } from 'react';
 
 export const BELLS = [
   { note: 'C', solfege: 'Do', color: '#FF3B30', image1: '/assets/bells/C 1.png', image2: '/assets/bells/C 2.png', key: '1' },
@@ -18,23 +18,34 @@ const KEY_TO_NOTE = {
 
 // IMPORTANT: All visual swaps use imperative DOM writes (imgRef.current.src = ...).
 // Image JSX src prop is CONSTANT (bell.image1) so React never overrides our imperative changes.
-// No state, no transitions, no animations - instant frame swap.
+// Dual-frame approach: both idle and pressed frames rendered; toggled via opacity + display.
+// pointer capture prevents spurious pointerleave from breaking the swap.
 function BellItem({ bell, onPlayNote, onNoteUp, highlightedNote, showNotation, registerRef }) {
-  const imgRef = useRef(null);
+  const idleRef = useRef(null);
+  const pressedRef = useRef(null);
 
   useEffect(() => {
-    if (registerRef) registerRef(bell.note, imgRef);
+    if (registerRef) registerRef(bell.note, { idleRef, pressedRef });
     return () => { if (registerRef) registerRef(bell.note, null); };
   }, [bell.note, registerRef]);
 
   const pressDown = useCallback((e) => {
     if (e && e.preventDefault) e.preventDefault();
-    if (imgRef.current) imgRef.current.src = bell.image2;
+    try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
+    if (idleRef.current) idleRef.current.style.opacity = '0';
+    if (pressedRef.current) {
+      pressedRef.current.style.display = 'block';
+      pressedRef.current.style.transform = 'scale(0.95)';
+    }
     onPlayNote(bell.note);
   }, [bell, onPlayNote]);
 
   const pressUp = useCallback(() => {
-    if (imgRef.current) imgRef.current.src = bell.image1;
+    if (pressedRef.current) {
+      pressedRef.current.style.display = '';
+      pressedRef.current.style.transform = '';
+    }
+    if (idleRef.current) idleRef.current.style.opacity = '';
     if (onNoteUp) onNoteUp(bell.note);
   }, [bell, onNoteUp]);
 
@@ -51,10 +62,18 @@ function BellItem({ bell, onPlayNote, onNoteUp, highlightedNote, showNotation, r
         style={{ touchAction: 'none' }}
       >
         <img
-          ref={imgRef}
+          ref={idleRef}
           src={bell.image1}
           alt={`${bell.solfege} bell`}
-          className="w-24 h-28 md:w-32 md:h-36 object-contain pointer-events-none"
+          className="instrument-frame-idle w-24 h-28 md:w-32 md:h-36 object-contain pointer-events-none"
+          draggable={false}
+        />
+        <img
+          ref={pressedRef}
+          src={bell.image2}
+          alt=""
+          aria-hidden="true"
+          className="instrument-frame-pressed w-24 h-28 md:w-32 md:h-36 object-contain pointer-events-none absolute top-0 left-0"
           draggable={false}
         />
         <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-white border-2 border-[var(--jma-dark)] flex items-center justify-center text-xs font-bold pointer-events-none"
@@ -68,13 +87,40 @@ function BellItem({ bell, onPlayNote, onNoteUp, highlightedNote, showNotation, r
   );
 }
 
-function JellyBellsRow({ onPlayNote, onNoteUp, highlightedNote, showNotation = true, enableKeyboard = true }) {
+const JellyBellsRow = forwardRef(function JellyBellsRow({ onPlayNote, onNoteUp, highlightedNote, showNotation = true, enableKeyboard = true }, ref) {
   // Parent-held map of img refs by note for keyboard-triggered swaps
   const refsRef = useRef({});
+  const timersRef = useRef({});
 
   const registerRef = useCallback((note, ref) => {
     if (ref) refsRef.current[note] = ref;
     else delete refsRef.current[note];
+  }, []);
+
+  // Imperative API for parent pages (Simon Says, Ear Trainer) to flash a bell
+  useImperativeHandle(ref, () => ({
+    flashNote: (note, ms = 400) => {
+      const refs = refsRef.current[note];
+      if (!refs) return;
+      if (refs.idleRef?.current) refs.idleRef.current.style.opacity = '0';
+      if (refs.pressedRef?.current) {
+        refs.pressedRef.current.style.display = 'block';
+        refs.pressedRef.current.style.transform = 'scale(0.95)';
+      }
+      clearTimeout(timersRef.current[note]);
+      timersRef.current[note] = setTimeout(() => {
+        if (refs.pressedRef?.current) {
+          refs.pressedRef.current.style.display = '';
+          refs.pressedRef.current.style.transform = '';
+        }
+        if (refs.idleRef?.current) refs.idleRef.current.style.opacity = '';
+      }, ms);
+    },
+  }));
+
+  useEffect(() => {
+    const timers = timersRef.current;
+    return () => Object.values(timers).forEach(t => clearTimeout(t));
   }, []);
 
   useEffect(() => {
@@ -84,18 +130,24 @@ function JellyBellsRow({ onPlayNote, onNoteUp, highlightedNote, showNotation = t
       const note = KEY_TO_NOTE[e.key];
       if (!note || pressedKeys.has(note)) return;
       pressedKeys.add(note);
-      const bell = BELLS.find(b => b.note === note);
-      const imgRef = refsRef.current[note];
-      if (imgRef && imgRef.current && bell) imgRef.current.src = bell.image2;
+      const refs = refsRef.current[note];
+      if (refs?.idleRef?.current) refs.idleRef.current.style.opacity = '0';
+      if (refs?.pressedRef?.current) {
+        refs.pressedRef.current.style.display = 'block';
+        refs.pressedRef.current.style.transform = 'scale(0.95)';
+      }
       onPlayNote(note);
     };
     const onKeyUp = (e) => {
       const note = KEY_TO_NOTE[e.key];
       if (!note) return;
       pressedKeys.delete(note);
-      const bell = BELLS.find(b => b.note === note);
-      const imgRef = refsRef.current[note];
-      if (imgRef && imgRef.current && bell) imgRef.current.src = bell.image1;
+      const refs = refsRef.current[note];
+      if (refs?.pressedRef?.current) {
+        refs.pressedRef.current.style.display = '';
+        refs.pressedRef.current.style.transform = '';
+      }
+      if (refs?.idleRef?.current) refs.idleRef.current.style.opacity = '';
       if (onNoteUp) onNoteUp(note);
     };
     window.addEventListener('keydown', onKeyDown);
@@ -118,7 +170,7 @@ function JellyBellsRow({ onPlayNote, onNoteUp, highlightedNote, showNotation = t
       ))}
     </div>
   );
-}
+});
 
 export { JellyBellsRow, KEY_TO_NOTE };
 export default JellyBellsRow;

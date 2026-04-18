@@ -22,9 +22,26 @@ export const SONG_LIBRARY = [
     id: 'amazing_grace',
     name: 'Amazing Grace',
     category: 'Classic',
-    notes: ['C','E','G','E','G','E','C','A','G','E','D','C',
-            'C','E','G','E','G','E','C','E','D','C',
-            'E','G','E','D','C','E','D','C']
+    // 3/4 time: | - - do | fa - la fa | la - so | fa - re | do - do |
+    //           | fa - la fa | la - so | HiDo - - | - - la |
+    //           | HiDo - la so | fa - re | re - fa | do - do |
+    //           | fa - la fa | la - so | fa |
+    notes: ['C',
+            'F','A','F',
+            'A','G',
+            'F','D',
+            'C','C',
+            'F','A','F',
+            'A','G',
+            'High C',
+            'A',
+            'High C','A','G',
+            'F','D',
+            'D','F',
+            'C','C',
+            'F','A','F',
+            'A','G',
+            'F']
   },
   // Video Game Vibes
   {
