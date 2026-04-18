@@ -29,6 +29,7 @@ Build a rhythm game for a music education platform using the user's custom artwo
 - JMA logo medallion in center
 - Big instrument sizes (bells ~160px, xylophone ~300px tall)
 - Drums: kit scaled 1.6x, crash/ride both +10%, snare -10%, all drum frames swap correctly
+- Drums: toms sit tightly on top of kick drum (TOMS_DY=+25), whole kit shifted 30px left via translateX
 - 4-tab selector (Bells, Xylophone, Piano, Drums) with keyboard mappings (1-8 for bells, Q W E A S D X for drums)
 - Record + Playback, Guided "Learn a Song" mode
 - Fun multi-color radial gradient game-board background (replaces white)

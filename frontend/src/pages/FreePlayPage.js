@@ -297,10 +297,10 @@ function DrumKitPlayable({ onDrumDown, onDrumUp, registerDrumRef }) {
   const L = (n) => px(n + RIGHT_SHIFT);
   // Toms group: move together up and slightly right
   const TOMS_DX = 15;
-  const TOMS_DY = -21;  // toms sit touching the top of the kick
+  const TOMS_DY = 25;  // (+) moves toms DOWN; settles them onto the kick drum
 
   return (
-    <div className="relative mx-auto" style={{ width: px(500 + RIGHT_SHIFT + 30), height: px(340) }}>
+    <div className="relative mx-auto" style={{ width: px(500 + RIGHT_SHIFT + 30), height: px(340), transform: 'translateX(-30px)' }}>
       <PlayableDrumPiece drumId="crash"  info={DRUM_INFO.crash}  onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
         style={{ left: L(90),  bottom: px(155), height: `${Math.round(130 * S * cymS)}px`, zIndex: 1, badgeLeft: L(145), badgeBottom: px(153) }} />
       <PlayableDrumPiece drumId="ride"   info={DRUM_INFO.ride}   onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}

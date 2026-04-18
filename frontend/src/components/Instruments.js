@@ -189,18 +189,23 @@ const DRUM_FRAMES = {
 };
 
 export const DrumKitVisual = forwardRef(function DrumKitVisual(_props, ref) {
-  const refsRef = useRef({});
+  const idleRefs = useRef({});
+  const pressedRefs = useRef({});
   const timersRef = useRef({});
 
   useImperativeHandle(ref, () => ({
-    flash: (id, ms = 100) => {
-      const frame = DRUM_FRAMES[id];
-      const imgRef = refsRef.current[id];
-      if (!frame || !imgRef || !imgRef.current) return;
-      imgRef.current.src = frame.img2;
+    flash: (id, ms = 120) => {
+      const idle = idleRefs.current[id];
+      const pressed = pressedRefs.current[id];
+      if (!idle || !pressed) return;
+      idle.style.opacity = '0';
+      pressed.style.display = 'block';
+      pressed.style.transform = 'scale(0.95)';
       clearTimeout(timersRef.current[id]);
       timersRef.current[id] = setTimeout(() => {
-        if (imgRef.current) imgRef.current.src = frame.img1;
+        pressed.style.display = '';
+        pressed.style.transform = '';
+        idle.style.opacity = '';
       }, ms);
     },
   }));
@@ -210,21 +215,28 @@ export const DrumKitVisual = forwardRef(function DrumKitVisual(_props, ref) {
     return () => Object.values(timers).forEach(t => clearTimeout(t));
   }, []);
 
-  const setRef = (id) => (el) => {
-    if (el) {
-      if (!refsRef.current[id]) refsRef.current[id] = { current: null };
-      refsRef.current[id].current = el;
-    }
-  };
-
   return (
     <div className="relative mx-auto" style={{ width: '380px', height: '240px' }}>
       {Object.entries(DRUM_FRAMES).map(([id, frame]) => (
-        <img key={id} ref={setRef(id)}
-          src={frame.img1} alt={id}
-          className="absolute object-contain"
-          style={frame.style}
-          draggable={false} />
+        <div key={id}>
+          <img
+            ref={(el) => { if (el) idleRefs.current[id] = el; }}
+            src={frame.img1}
+            alt={id}
+            className="instrument-frame-idle absolute object-contain"
+            style={frame.style}
+            draggable={false}
+          />
+          <img
+            ref={(el) => { if (el) pressedRefs.current[id] = el; }}
+            src={frame.img2}
+            alt=""
+            aria-hidden="true"
+            className="instrument-frame-pressed absolute object-contain pointer-events-none"
+            style={frame.style}
+            draggable={false}
+          />
+        </div>
       ))}
       {/* Toms base - static decoration */}
       <img src="/assets/drums/toms-base.png" alt="Toms base" className="absolute object-contain"

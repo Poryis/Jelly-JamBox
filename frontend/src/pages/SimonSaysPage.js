@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Play, Eye, RotateCcw } from 'lucide-react';
-import { JellyBellsRow, BELLS, KEY_TO_NOTE } from '../components/JellyBells';
+import { JellyBellsRow, BELLS } from '../components/JellyBells';
 import { GameHeader, FeedbackPopup, ProgressBar } from '../components/GameUI';
 import { PageCharacters } from '../components/PageCharacters';
 import { FullscreenButton } from '../components/FullscreenButton';
@@ -154,20 +154,9 @@ function SimonSaysPage({ score, setScore, gameStats, setGameStats, resetGame }) 
     }
   }, [gameState, playerIndex, currentPattern, level, playBellNote, playFeedbackSound, setScore, setGameStats, navigate]);
 
-  // Keyboard controls for Simon Says
-  useEffect(() => {
-    if (gameState !== 'playing') return;
-
-    const handleKeyDown = (e) => {
-      const note = KEY_TO_NOTE[e.key];
-      if (note) {
-        handlePlayNote(note);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gameState, handlePlayNote]);
+  // NOTE: Keyboard is handled inside <JellyBellsRow> itself (with imperative
+  // visual swap + dedup of key-repeat). Adding another keydown listener here
+  // would fire handlePlayNote twice per key, which broke the swap and scoring.
 
   // Ready screen
   if (gameState === 'ready') {
