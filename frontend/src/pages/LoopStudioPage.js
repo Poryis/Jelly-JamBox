@@ -7,6 +7,7 @@ import { PageCharacters } from '../components/PageCharacters';
 import { FullscreenButton } from '../components/FullscreenButton';
 import { DrumKitVisual, TurntableVisual } from '../components/Instruments';
 import useAudio from '../hooks/useAudio';
+import { earnSticker } from '../hooks/useStickers';
 
 const DEFAULT_BPM = 100;
 
@@ -212,6 +213,8 @@ function LoopStudioPage() {
       setCurrentStep(-1);
     } else {
       setIsPlaying(true);
+      // Sticker: kid played a loop
+      earnSticker('ach_beat_maker');
       let step = 0;
       const msPerStep = (60 / bpm / 4) * 1000;
       playStep(0);

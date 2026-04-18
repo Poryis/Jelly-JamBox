@@ -8,6 +8,8 @@ import RhythmGamePage from "./pages/RhythmGamePage";
 import SimonSaysPage from "./pages/SimonSaysPage";
 import EarTrainerPage from "./pages/EarTrainerPage";
 import LoopStudioPage from "./pages/LoopStudioPage";
+import StickerBookPage from "./pages/StickerBookPage";
+import StickerToast from "./components/StickerToast";
 
 function App() {
   const [score, setScore] = useState(0);
@@ -23,6 +25,7 @@ function App() {
   return (
     <div className="App min-h-screen">
       <BrowserRouter>
+        <StickerToast />
         <AnimatePresence mode="wait">
           <Routes>
             <Route path="/" element={<HomePage />} />
@@ -35,6 +38,7 @@ function App() {
             } />
             <Route path="/ear-trainer" element={<EarTrainerPage />} />
             <Route path="/loop-studio" element={<LoopStudioPage />} />
+            <Route path="/sticker-book" element={<StickerBookPage />} />
           </Routes>
         </AnimatePresence>
       </BrowserRouter>

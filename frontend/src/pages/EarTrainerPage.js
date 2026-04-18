@@ -2,11 +2,12 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Play, Ear, RotateCcw, Volume2, Trophy } from 'lucide-react';
-import JellyBellsRow, { BELLS } from '../components/JellyBells';
-import { GameHeader } from '../components/GameUI';
+import { JellyBellsRow, BELLS } from '../components/JellyBells';
+import { GameHeader, FeedbackPopup } from '../components/GameUI';
 import { PageCharacters } from '../components/PageCharacters';
 import { FullscreenButton } from '../components/FullscreenButton';
 import useAudio from '../hooks/useAudio';
+import { earnSticker } from '../hooks/useStickers';
 import { getEarTrainerStats, saveEarTrainerStats } from '../hooks/useScores';
 
 // Difficulty levels
@@ -87,7 +88,11 @@ function EarTrainerPage() {
     if (correct) {
       setScore(prev => prev + (10 * (streak + 1)));
       setStreak(prev => prev + 1);
-      setResults(prev => ({ ...prev, correct: prev.correct + 1 }));
+      setResults(prev => {
+        const next = { ...prev, correct: prev.correct + 1 };
+        if (next.correct >= 5) earnSticker('ach_ear_trainer');
+        return next;
+      });
       playFeedbackSound('perfect');
     } else {
       setStreak(0);

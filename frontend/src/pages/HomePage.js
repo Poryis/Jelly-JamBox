@@ -1,8 +1,9 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Music, Drum, Brain, Layers, Ear, X } from 'lucide-react';
+import { Music, Drum, Brain, Layers, Ear, X, Sparkles } from 'lucide-react';
 import { getRandomFact } from '../data/musicFacts';
+import { earnSticker, noteFactSeen } from '../hooks/useStickers';
 
 // SVG cartoony music notes - colorful, thick-stroked, fun
 const NOTES = [
@@ -78,7 +79,17 @@ function HomePage() {
 
   const showFact = useCallback((characterName) => {
     const fact = getRandomFact(characterName);
-    if (fact) setActiveFact({ character: characterName, ...fact });
+    if (fact) {
+      setActiveFact({ character: characterName, ...fact });
+      // Earn character sticker the first time this character is clicked
+      const charStickerMap = {
+        'Finn': 'char_finn', 'Charlie': 'char_charlie', 'Chunk': 'char_chunk',
+        'Jazzy': 'char_jazzy', 'Dr. Jellybone': 'char_doctor', 'Lou & Stew': 'char_loustew',
+      };
+      const sid = charStickerMap[characterName];
+      if (sid) earnSticker(sid);
+      noteFactSeen();
+    }
   }, []);
 
   const closeFact = useCallback(() => setActiveFact(null), []);
@@ -244,6 +255,21 @@ function HomePage() {
           ))}
         </div>
       </div>
+
+      {/* Sticker Book button */}
+      <motion.button
+        data-testid="sticker-book-btn"
+        onClick={() => navigate('/sticker-book')}
+        className="mt-4 z-10 chunky-btn bg-gradient-to-r from-[#FFCC00] via-[#FF9500] to-[#FF3B30] text-white px-6 py-2.5 flex items-center gap-2 text-base font-bold rounded-full border-4 border-[var(--jma-dark)] shadow-[0_6px_0_0_var(--jma-dark)]"
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 1.0, type: 'spring', stiffness: 260 }}
+        whileHover={{ scale: 1.05, y: -2 }}
+        whileTap={{ scale: 0.96, y: 2 }}
+      >
+        <Sparkles className="w-5 h-5" />
+        Sticker Book
+      </motion.button>
     </div>
   );
 }

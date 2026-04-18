@@ -5,6 +5,7 @@ import { BELLS, KEY_TO_NOTE } from '../components/JellyBells';
 import { GameHeader, NotationDisplay } from '../components/GameUI';
 import { XylophoneInstrument, PianoInstrument } from '../components/Instruments';
 import { FullscreenButton } from '../components/FullscreenButton';
+import { earnSticker } from '../hooks/useStickers';
 import useAudio from '../hooks/useAudio';
 
 const GUIDED_SONGS = [
@@ -296,7 +297,7 @@ function DrumKitPlayable({ onDrumDown, onDrumUp, registerDrumRef }) {
   const L = (n) => px(n + RIGHT_SHIFT);
   // Toms group: move together up and slightly right
   const TOMS_DX = 15;
-  const TOMS_DY = -25;  // toms sit touching the kick (not flying high)
+  const TOMS_DY = -21;  // toms sit touching the top of the kick
 
   return (
     <div className="relative mx-auto" style={{ width: px(500 + RIGHT_SHIFT + 30), height: px(340) }}>
@@ -404,7 +405,23 @@ function FreePlayPage() {
       const song = GUIDED_SONGS[guidedSongIdx];
       if (song && note === song.notes[guidedStep]) setGuidedStep(prev => prev + 1 >= song.notes.length ? 0 : prev + 1);
     }
-  }, [initAudioContext, playModeSound, isRecording, guidedMode, guidedSongIdx, guidedStep, spawnParticles]);
+    // Stickers: first note + per-bell + instrument tab
+    earnSticker('ach_first_note');
+    const bellStickerMap = { 'C': 'bell_C', 'D': 'bell_D', 'E': 'bell_E', 'F': 'bell_F', 'G': 'bell_G', 'A': 'bell_A', 'B': 'bell_B', 'High C': 'bell_HC' };
+    if (bellStickerMap[note]) earnSticker(bellStickerMap[note]);
+    const tabStickerMap = { 'bells': 'inst_bells', 'xylophone': 'inst_xylo', 'piano': 'inst_piano' };
+    if (tabStickerMap[activeTab]) earnSticker(tabStickerMap[activeTab]);
+    // One-Kid Band: played all 4 instruments
+    try {
+      const played = JSON.parse(localStorage.getItem('jma_instruments_played_v1') || '[]');
+      if (!played.includes(activeTab)) {
+        played.push(activeTab);
+        localStorage.setItem('jma_instruments_played_v1', JSON.stringify(played));
+      }
+      const hasAll = ['bells', 'xylophone', 'piano', 'drums'].every(t => played.includes(t));
+      if (hasAll) earnSticker('ach_one_kid_band');
+    } catch (_) {}
+  }, [initAudioContext, playModeSound, isRecording, guidedMode, guidedSongIdx, guidedStep, spawnParticles, activeTab]);
 
   const onBellUp = useCallback(() => {}, []);
 
@@ -414,6 +431,18 @@ function FreePlayPage() {
     setStreak(prev => prev + 1);
     spawnParticles(DRUM_INFO[drumId]?.color || '#E74C3C');
     if (isRecording) setRecording(prev => [...prev, { note: drumId, type: 'drum', time: Date.now() - recordStartRef.current }]);
+    // Stickers
+    earnSticker('ach_first_note');
+    earnSticker('inst_drums');
+    try {
+      const played = JSON.parse(localStorage.getItem('jma_instruments_played_v1') || '[]');
+      if (!played.includes('drums')) {
+        played.push('drums');
+        localStorage.setItem('jma_instruments_played_v1', JSON.stringify(played));
+      }
+      const hasAll = ['bells', 'xylophone', 'piano', 'drums'].every(t => played.includes(t));
+      if (hasAll) earnSticker('ach_one_kid_band');
+    } catch (_) {}
   }, [initAudioContext, playDrumSound, isRecording, spawnParticles]);
 
   const onDrumUp = useCallback(() => {}, []);

@@ -7,6 +7,7 @@ import { GameHeader, FeedbackPopup, ProgressBar } from '../components/GameUI';
 import { PageCharacters } from '../components/PageCharacters';
 import { FullscreenButton } from '../components/FullscreenButton';
 import useAudio from '../hooks/useAudio';
+import { earnSticker } from '../hooks/useStickers';
 import { SONG_LIBRARY, SPEED_SETTINGS, getSongsByCategory } from '../data/songs';
 import { getHighScore, saveHighScore, getTopScores } from '../hooks/useScores';
 
@@ -179,13 +180,28 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
     });
   }, [playFeedbackSound, setGameStats]);
 
-  // Save score when game ends
+  // Save score when game ends + award stickers
   useEffect(() => {
     if (gameState !== 'finished') return;
     const total = gameStats.perfect + gameStats.miss;
     const accuracy = total > 0 ? Math.round((gameStats.perfect / total) * 100) : 0;
     const newRecord = saveHighScore(selectedSong.id, speed, score, { accuracy, maxStreak: gameStats.maxStreak });
     setIsNewRecord(newRecord);
+    // Award song-completion sticker if accuracy >= 70%
+    if (accuracy >= 70) {
+      const id = `song_${selectedSong.id}`;
+      earnSticker(id);
+      // Track cumulative completions for Song Collector
+      try {
+        const set = new Set(JSON.parse(localStorage.getItem('jma_songs_completed_v1') || '[]'));
+        set.add(selectedSong.id);
+        localStorage.setItem('jma_songs_completed_v1', JSON.stringify([...set]));
+        if (set.size >= 5) earnSticker('ach_song_5');
+      } catch (_) {}
+    }
+    // Streak stickers
+    if (gameStats.maxStreak >= 10) earnSticker('ach_streak_10');
+    if (gameStats.maxStreak >= 25) earnSticker('ach_streak_25');
   }, [gameState, selectedSong.id, speed, score, gameStats]);
 
   // FINISHED screen

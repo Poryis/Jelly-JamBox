@@ -2,11 +2,12 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Play, Eye, RotateCcw } from 'lucide-react';
-import JellyBellsRow, { BELLS, KEY_TO_NOTE } from '../components/JellyBells';
+import { JellyBellsRow, BELLS, KEY_TO_NOTE } from '../components/JellyBells';
 import { GameHeader, FeedbackPopup, ProgressBar } from '../components/GameUI';
 import { PageCharacters } from '../components/PageCharacters';
 import { FullscreenButton } from '../components/FullscreenButton';
 import useAudio from '../hooks/useAudio';
+import { earnSticker } from '../hooks/useStickers';
 
 // Patterns for Simon Says (progressively harder)
 const PATTERNS = {
@@ -116,6 +117,8 @@ function SimonSaysPage({ score, setScore, gameStats, setGameStats, resetGame }) 
 
         // Move to next level or finish
         timeoutRef.current = setTimeout(() => {
+          // Sticker: completed a level — level 5+ earns Super Ear
+          if (level >= 5) earnSticker('ach_simon_5');
           if (level >= 8) {
             setGameState('finished');
             navigate('/results');
