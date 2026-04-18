@@ -95,6 +95,11 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 8px 0 0 var(--jma-dark);
 }
 
+.instrument-frame-pressed {
+  display: none;
+  transform-origin: center center;
+}
+
 .bell-instrument {
   cursor: pointer;
   user-select: none;

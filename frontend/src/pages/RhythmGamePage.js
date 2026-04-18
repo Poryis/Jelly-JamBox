@@ -114,8 +114,11 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
       if (note && activeBells.includes(note) && !pressedKeysRef.current.has(e.key)) {
         pressedKeysRef.current.add(e.key);
         const refs = bellImgRefs.current[note];
-        if (refs?.current) refs.current.style.display = 'none';
-        if (refs?.pressedEl) refs.pressedEl.style.display = 'block';
+        if (refs?.current) refs.current.style.opacity = '0';
+        if (refs?.pressedEl) {
+          refs.pressedEl.style.display = 'block';
+          refs.pressedEl.style.transform = 'scale(0.95)';
+        }
         handlePlayNote(note);
       }
     };
@@ -124,8 +127,11 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
       if (note) {
         pressedKeysRef.current.delete(e.key);
         const refs = bellImgRefs.current[note];
-        if (refs?.pressedEl) refs.pressedEl.style.display = 'none';
-        if (refs?.current) refs.current.style.display = 'block';
+        if (refs?.pressedEl) {
+          refs.pressedEl.style.display = '';
+          refs.pressedEl.style.transform = '';
+        }
+        if (refs?.current) refs.current.style.opacity = '';
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -307,18 +313,25 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
               const setPressedRef = (el) => { bellImgRefs.current[note].pressedEl = el; };
               const doDown = (e) => {
                 e.preventDefault();
+                try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
                 const idle = bellImgRefs.current[note]?.current;
                 const pressed = bellImgRefs.current[note]?.pressedEl;
-                if (idle) idle.style.display = 'none';
-                if (pressed) pressed.style.display = 'block';
+                if (idle) idle.style.opacity = '0';
+                if (pressed) {
+                  pressed.style.display = 'block';
+                  pressed.style.transform = 'scale(0.95)';
+                }
                 handlePlayNote(note);
               };
               const doUp = (e) => {
                 if (e) e.preventDefault();
                 const idle = bellImgRefs.current[note]?.current;
                 const pressed = bellImgRefs.current[note]?.pressedEl;
-                if (pressed) pressed.style.display = 'none';
-                if (idle) idle.style.display = 'block';
+                if (pressed) {
+                  pressed.style.display = '';
+                  pressed.style.transform = '';
+                }
+                if (idle) idle.style.opacity = '';
               };
               return (
                 <div key={note} className="rhythm-lane" style={{ backgroundColor: `${bell?.color}10` }}>
@@ -339,7 +352,7 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
                         ref={setIdleRef}
                         src={bell?.image1}
                         alt={bell?.solfege}
-                        className="w-20 h-24 md:w-28 md:h-32 lg:w-32 lg:h-36 object-contain pointer-events-none"
+                        className="instrument-frame-idle w-20 h-24 md:w-28 md:h-32 lg:w-32 lg:h-36 object-contain pointer-events-none"
                         draggable={false}
                       />
                       <img
@@ -347,9 +360,8 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
                         src={bell?.image2}
                         alt=""
                         aria-hidden="true"
-                        className="w-20 h-24 md:w-28 md:h-32 lg:w-32 lg:h-36 object-contain pointer-events-none absolute top-0 left-0"
+                        className="instrument-frame-pressed w-20 h-24 md:w-28 md:h-32 lg:w-32 lg:h-36 object-contain pointer-events-none absolute top-0 left-0"
                         draggable={false}
-                        style={{ display: 'none' }}
                       />
                       <span className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-white border border-[var(--jma-dark)] text-sm font-bold flex items-center justify-center pointer-events-none"
                         style={{ color: bell?.color }}>{bell?.key}</span>

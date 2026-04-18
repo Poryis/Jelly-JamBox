@@ -18,28 +18,6 @@ export const SONG_LIBRARY = [
     notes: ['C','E','F','G','C','E','F','G','C','E','F','G','E','C','E','D',
             'E','E','D','C','C','E','G','G','F','E','F','G','E','C','D','C']
   },
-  // Rock Riffs
-  {
-    id: 'smoke_water',
-    name: 'Smoke on the Water',
-    category: 'Rock',
-    notes: ['C','D','F','C','D','F','G','C','D','F','D','C',
-            'C','D','F','C','D','F','G','C','D','F','D','C']
-  },
-  {
-    id: 'seven_nation',
-    name: 'Seven Nation Army',
-    category: 'Rock',
-    notes: ['E','E','G','E','D','C','B','E','E','G','E','D','C','B',
-            'E','E','G','E','D','C','D','C','B']
-  },
-  {
-    id: 'iron_man',
-    name: 'Iron Man Riff',
-    category: 'Rock',
-    notes: ['B','D','D','E','F','F','E','D','D','G','F','F','E','D','D',
-            'B','D','D','E','F','F','E','D','D']
-  },
   // Video Game Vibes
   {
     id: 'mario_theme',

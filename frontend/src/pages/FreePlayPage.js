@@ -83,51 +83,44 @@ function CharacterReaction({ streak }) {
 }
 
 // ============================================================================
-// BellCircle: 8 bells arranged around a center point in a 3/4 ring (horseshoe).
-// Upright orientation, large, with a decorative center piece.
+// BellCircle: 8 bells evenly spaced around a TRUE circle (square container).
+// Each bell is rotated so its top points OUTWARD from the center.
+// All bells are the same size, equidistant from the center and each other.
 // ============================================================================
 function BellCircle({ onDown, onUp, nextGuidedNote, registerRef }) {
   const n = BELLS.length;
-  // Arc from 225deg to -45deg (CCW) = 270deg ring, bottom gap.
-  // Bell 0 (Do) at top-left (angle=135), bell 7 (High C) at top-right (angle=45)
-  // going clockwise around the top and both sides.
-  // Actually easier: distribute from leftmost-bottom (-135) up around top to rightmost-bottom (-45 past 180).
-  // Use standard math convention: 0deg=right, 90deg=up. Start at 210deg (bottom-left), go CCW to -30deg (bottom-right)
-  // That's 240deg total. Spacing = 240 / 7 = 34.3deg.
-  const startAngle = 210;
-  const totalArc = 240;
   return (
     <div
-      className="relative w-full mx-auto"
-      style={{ height: 'var(--bell-ring-h, 520px)', maxWidth: '900px' }}
+      className="relative mx-auto"
+      style={{
+        width: 'min(80vh, 80vmin, 720px)',
+        aspectRatio: '1 / 1',
+      }}
       data-testid="jelly-bells-row"
     >
       {/* Center medallion */}
       <div
         className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-center"
-        style={{ width: '120px', height: '120px' }}
+        style={{ width: '28%', height: '28%' }}
       >
         <div className="w-full h-full rounded-full border-4 border-[var(--jma-dark)] bg-white/70 backdrop-blur-sm flex items-center justify-center shadow-[0_6px_0_0_var(--jma-dark)]">
-          <img src="/assets/ui/logo.png" alt="" className="w-20 h-20 object-contain" draggable={false} />
+          <img src="/assets/ui/logo.png" alt="" className="w-[70%] h-[70%] object-contain" draggable={false} />
         </div>
       </div>
-      {/* Decorative ring path */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 900 520" preserveAspectRatio="none">
-        <ellipse cx="450" cy="260" rx="340" ry="200"
-          stroke="rgba(10,37,64,0.12)" strokeWidth="4" strokeDasharray="6 10" fill="none" />
+      {/* Decorative ring path - true circle */}
+      <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <circle cx="50" cy="50" r="38" stroke="rgba(10,37,64,0.12)" strokeWidth="0.6" strokeDasharray="1.2 2" fill="none" />
       </svg>
       {BELLS.map((bell, i) => {
-        const angle = startAngle + (i * (totalArc / (n - 1)));
+        // Distribute 8 bells evenly around 360deg, starting at 12 o'clock.
+        // math convention: angle 90 = top. Going clockwise: subtract i * 45deg.
+        const angle = 90 - (i * (360 / n));
         const rad = (angle * Math.PI) / 180;
-        const cx = 50;
-        const cy = 50;
-        const rx = 40; // horizontal radius %
-        const ry = 38; // vertical radius %
-        const x = cx + rx * Math.cos(rad);
-        const y = cy - ry * Math.sin(rad); // subtract because CSS y grows downward
-        // Rotate each bell so its top points OUTWARD from the center.
-        // Bell at math-angle A is positioned at direction (cos A, sin A) from center.
-        // CSS rotation (clockwise from 12 o'clock) = 90 - A (degrees).
+        const radius = 38; // percentage of container
+        const x = 50 + radius * Math.cos(rad);
+        const y = 50 - radius * Math.sin(rad);
+        // Each bell's top should point OUTWARD from center.
+        // CSS rotation (clockwise from 12) = 90 - angle (math)
         const bellRotation = 90 - angle;
         return (
           <div
@@ -155,11 +148,12 @@ function BellCircle({ onDown, onUp, nextGuidedNote, registerRef }) {
   );
 }
 // ============================================================================
-// PlayableBell: BOTH frames rendered in DOM, stacked absolutely.
-// Toggling: on press we HIDE idle and SHOW pressed (display swap on both).
-// This prevents transparent images from bleeding through each other.
-// Zero network, zero decode, zero React render - INSTANT.
-// `rotation` prop rotates ONLY the bell image, label stays upright.
+// PlayableBell: Both frames rendered in DOM. Pressed frame is hidden via CSS
+// class `.instrument-frame-pressed` (NOT JSX style) so React can't clobber.
+// On press: imperative style.display='block' + scale(0.95) shows & shrinks
+// the pressed frame; idle frame is hidden via style.display='none'.
+// On release: inline styles are cleared so CSS rule reasserts default state.
+// `rotation` prop rotates both frames together, label stays upright.
 function PlayableBell({ bell, onDown, onUp, isHighlighted, registerRef, rotation = 0 }) {
   const idleRef = useRef(null);
   const pressedRef = useRef(null);
@@ -171,13 +165,22 @@ function PlayableBell({ bell, onDown, onUp, isHighlighted, registerRef, rotation
 
   const doDown = (e) => {
     if (e && e.preventDefault) e.preventDefault();
-    if (idleRef.current) idleRef.current.style.display = 'none';
-    if (pressedRef.current) pressedRef.current.style.display = 'block';
+    // Pointer capture locks subsequent events to this element even if
+    // layout shifts, preventing spurious pointerleave from breaking swap.
+    try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
+    if (idleRef.current) idleRef.current.style.opacity = '0';
+    if (pressedRef.current) {
+      pressedRef.current.style.display = 'block';
+      pressedRef.current.style.transform = 'scale(0.95)';
+    }
     onDown(bell.note);
   };
   const doUp = () => {
-    if (pressedRef.current) pressedRef.current.style.display = 'none';
-    if (idleRef.current) idleRef.current.style.display = 'block';
+    if (pressedRef.current) {
+      pressedRef.current.style.display = '';
+      pressedRef.current.style.transform = '';
+    }
+    if (idleRef.current) idleRef.current.style.opacity = '';
     onUp(bell.note);
   };
 
@@ -200,7 +203,7 @@ function PlayableBell({ bell, onDown, onUp, isHighlighted, registerRef, rotation
           ref={idleRef}
           src={bell.image1}
           alt={bell.solfege}
-          className="w-28 h-32 md:w-36 md:h-40 lg:w-40 lg:h-48 object-contain pointer-events-none"
+          className="instrument-frame-idle w-28 h-32 md:w-36 md:h-40 lg:w-40 lg:h-48 object-contain pointer-events-none"
           draggable={false}
         />
         <img
@@ -208,9 +211,8 @@ function PlayableBell({ bell, onDown, onUp, isHighlighted, registerRef, rotation
           src={bell.image2}
           alt=""
           aria-hidden="true"
-          className="w-28 h-32 md:w-36 md:h-40 lg:w-40 lg:h-48 object-contain pointer-events-none absolute top-0 left-0"
+          className="instrument-frame-pressed w-28 h-32 md:w-36 md:h-40 lg:w-40 lg:h-48 object-contain pointer-events-none absolute top-0 left-0"
           draggable={false}
-          style={{ display: 'none' }}
         />
         <div className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-white border-2 border-[var(--jma-dark)] flex items-center justify-center text-sm font-bold pointer-events-none"
           style={{ color: bell.color }}>{bell.key}</div>
@@ -224,8 +226,7 @@ function PlayableBell({ bell, onDown, onUp, isHighlighted, registerRef, rotation
 }
 
 // ============================================================================
-// Drum piece with dual-frame stacked approach. Toggles BOTH frames.
-// ============================================================================
+// Drum piece using the same CSS-class swap pattern.
 function PlayableDrumPiece({ drumId, info, onDown, onUp, style, registerRef }) {
   const idleRef = useRef(null);
   const pressedRef = useRef(null);
@@ -237,13 +238,20 @@ function PlayableDrumPiece({ drumId, info, onDown, onUp, style, registerRef }) {
 
   const doDown = (e) => {
     if (e && e.preventDefault) e.preventDefault();
-    if (idleRef.current) idleRef.current.style.display = 'none';
-    if (pressedRef.current) pressedRef.current.style.display = 'block';
+    try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
+    if (idleRef.current) idleRef.current.style.opacity = '0';
+    if (pressedRef.current) {
+      pressedRef.current.style.display = 'block';
+      pressedRef.current.style.transform = 'scale(0.95)';
+    }
     onDown(drumId);
   };
   const doUp = () => {
-    if (pressedRef.current) pressedRef.current.style.display = 'none';
-    if (idleRef.current) idleRef.current.style.display = 'block';
+    if (pressedRef.current) {
+      pressedRef.current.style.display = '';
+      pressedRef.current.style.transform = '';
+    }
+    if (idleRef.current) idleRef.current.style.opacity = '';
     onUp(drumId);
   };
 
@@ -255,7 +263,7 @@ function PlayableDrumPiece({ drumId, info, onDown, onUp, style, registerRef }) {
         ref={idleRef}
         src={info.img1}
         alt={info.label}
-        className="absolute object-contain cursor-pointer"
+        className="instrument-frame-idle absolute object-contain cursor-pointer"
         style={{ ...imgStyle, touchAction: 'none' }}
         onPointerDown={doDown}
         onPointerUp={doUp}
@@ -268,8 +276,8 @@ function PlayableDrumPiece({ drumId, info, onDown, onUp, style, registerRef }) {
         src={info.img2}
         alt=""
         aria-hidden="true"
-        className="absolute object-contain pointer-events-none"
-        style={{ ...imgStyle, display: 'none', touchAction: 'none' }}
+        className="instrument-frame-pressed absolute object-contain pointer-events-none"
+        style={{ ...imgStyle, touchAction: 'none' }}
         draggable={false}
       />
       <div className="absolute text-xs font-bold bg-white/80 rounded-full w-6 h-6 flex items-center justify-center border border-[var(--jma-dark)] pointer-events-none"
@@ -412,13 +420,19 @@ function FreePlayPage() {
 
     const showPressed = (refs) => {
       if (!refs) return;
-      if (refs.idleRef && refs.idleRef.current) refs.idleRef.current.style.display = 'none';
-      if (refs.pressedRef && refs.pressedRef.current) refs.pressedRef.current.style.display = 'block';
+      if (refs.idleRef && refs.idleRef.current) refs.idleRef.current.style.opacity = '0';
+      if (refs.pressedRef && refs.pressedRef.current) {
+        refs.pressedRef.current.style.display = 'block';
+        refs.pressedRef.current.style.transform = 'scale(0.95)';
+      }
     };
     const showIdle = (refs) => {
       if (!refs) return;
-      if (refs.pressedRef && refs.pressedRef.current) refs.pressedRef.current.style.display = 'none';
-      if (refs.idleRef && refs.idleRef.current) refs.idleRef.current.style.display = 'block';
+      if (refs.pressedRef && refs.pressedRef.current) {
+        refs.pressedRef.current.style.display = '';
+        refs.pressedRef.current.style.transform = '';
+      }
+      if (refs.idleRef && refs.idleRef.current) refs.idleRef.current.style.opacity = '';
     };
 
     const down = (e) => {
@@ -470,21 +484,33 @@ function FreePlayPage() {
   const flashBell = useCallback((note, ms = 120) => {
     const refs = bellRefsRef.current[note];
     if (!refs) return;
-    if (refs.idleRef && refs.idleRef.current) refs.idleRef.current.style.display = 'none';
-    if (refs.pressedRef && refs.pressedRef.current) refs.pressedRef.current.style.display = 'block';
+    if (refs.idleRef && refs.idleRef.current) refs.idleRef.current.style.opacity = '0';
+    if (refs.pressedRef && refs.pressedRef.current) {
+      refs.pressedRef.current.style.display = 'block';
+      refs.pressedRef.current.style.transform = 'scale(0.95)';
+    }
     setTimeout(() => {
-      if (refs.pressedRef && refs.pressedRef.current) refs.pressedRef.current.style.display = 'none';
-      if (refs.idleRef && refs.idleRef.current) refs.idleRef.current.style.display = 'block';
+      if (refs.pressedRef && refs.pressedRef.current) {
+        refs.pressedRef.current.style.display = '';
+        refs.pressedRef.current.style.transform = '';
+      }
+      if (refs.idleRef && refs.idleRef.current) refs.idleRef.current.style.opacity = '';
     }, ms);
   }, []);
   const flashDrum = useCallback((drumId, ms = 120) => {
     const refs = drumRefsRef.current[drumId];
     if (!refs) return;
-    if (refs.idleRef && refs.idleRef.current) refs.idleRef.current.style.display = 'none';
-    if (refs.pressedRef && refs.pressedRef.current) refs.pressedRef.current.style.display = 'block';
+    if (refs.idleRef && refs.idleRef.current) refs.idleRef.current.style.opacity = '0';
+    if (refs.pressedRef && refs.pressedRef.current) {
+      refs.pressedRef.current.style.display = 'block';
+      refs.pressedRef.current.style.transform = 'scale(0.95)';
+    }
     setTimeout(() => {
-      if (refs.pressedRef && refs.pressedRef.current) refs.pressedRef.current.style.display = 'none';
-      if (refs.idleRef && refs.idleRef.current) refs.idleRef.current.style.display = 'block';
+      if (refs.pressedRef && refs.pressedRef.current) {
+        refs.pressedRef.current.style.display = '';
+        refs.pressedRef.current.style.transform = '';
+      }
+      if (refs.idleRef && refs.idleRef.current) refs.idleRef.current.style.opacity = '';
     }, ms);
   }, []);
 
@@ -585,7 +611,7 @@ function FreePlayPage() {
                 ))}
               </div>
             )}
-            <motion.div className="game-board p-3 md:p-5 w-[95vw] max-w-[1400px] flex items-center justify-center min-h-[560px] md:min-h-[640px]" initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
+            <motion.div className="game-board p-3 md:p-5 w-full max-w-[1400px] flex items-center justify-center" initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
               {activeTab === 'bells' && <BellCircle onDown={onBellDown} onUp={onBellUp} nextGuidedNote={nextGuidedNote} registerRef={registerBellRef} />}
               {activeTab === 'xylophone' && <XylophoneInstrument ref={xyloRef} onPlayNote={onBellDown} onNoteUp={onBellUp} highlightedNote={nextGuidedNote} />}
               {activeTab === 'piano' && <PianoInstrument ref={pianoRef} onPlayNote={onBellDown} onNoteUp={onBellUp} highlightedNote={nextGuidedNote} />}
