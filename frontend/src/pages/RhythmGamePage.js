@@ -92,16 +92,8 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
   const handlePlayNote = useCallback((tappedNote) => {
     playBellNote(tappedNote);
     const currentNotes = fallingNotesRef.current;
-    // Slightly less forgiving: require the note to have traveled at least 45% of its lane
-    // (previously: any un-hit note counted, even just after spawning)
-    const fallMs = (speedConfig.fallSpeed || 3) * 1000;
-    const minElapsed = fallMs * 0.45;
-    const now = Date.now();
-    const matchingNote = currentNotes.find(n =>
-      n.note === tappedNote &&
-      !n.hit &&
-      (n.spawnedAt ? now - n.spawnedAt >= minElapsed : true)
-    );
+    // Super forgiving: any un-hit note of the matching pitch on screen counts as a hit.
+    const matchingNote = currentNotes.find(n => n.note === tappedNote && !n.hit);
 
     if (matchingNote) {
       setScore(prev => prev + 100);
@@ -114,7 +106,7 @@ function RhythmGamePage({ score, setScore, gameStats, setGameStats, resetGame })
       setFallingNotes(prev => prev.filter(n => n.id !== matchingNote.id));
     }
     setTimeout(() => setFeedback(null), 400);
-  }, [playBellNote, playFeedbackSound, setScore, setGameStats, speedConfig.fallSpeed]);
+  }, [playBellNote, playFeedbackSound, setScore, setGameStats]);
 
   // Keyboard controls - imperative image swap via ref (no React render)
   useEffect(() => {

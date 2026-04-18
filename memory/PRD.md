@@ -39,6 +39,11 @@ Build a rhythm game for a music education platform using the user's custom artwo
 - Click a song to start (no separate Start button)
 - Removed Smoke on the Water, Iron Man, Seven Nation Army (required notes outside 8-bell range)
 - Swap states work on bells via pointer + keyboard
+- **Scoring: SUPER forgiving** — any un-hit note of the correct pitch on screen counts as a hit (Feb 2026: reverted an accidental 45%-min-travel gate that made scoring feel impossible)
+
+### Sticker Book (Feb 2026)
+- 41 unlockable stickers tracked via `localStorage` (`useStickers.js`)
+- Awarded on game-mode completion milestones (song clears >=70% accuracy, streak 10/25, etc.)
 
 ### Home Page
 - 6 characters each with 10-11 age-appropriate music facts
