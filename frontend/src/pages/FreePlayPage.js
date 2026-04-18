@@ -319,7 +319,7 @@ function FreePlayPage() {
 
   const onDrumUp = useCallback(() => {}, []);
 
-  // Keyboard: imperatively swap image via refs BEFORE calling sound handlers
+  // Keyboard: imperatively toggle the pre-rendered pressed frame via refs
   useEffect(() => {
     const pressedBells = new Set();
     const pressedDrums = new Set();
@@ -329,11 +329,9 @@ function FreePlayPage() {
       const bellNote = KEY_TO_NOTE[e.key];
       if (bellNote && !pressedBells.has(bellNote)) {
         pressedBells.add(bellNote);
-        // Swap image based on active tab
         if (activeTab === 'bells') {
-          const bell = BELLS.find(b => b.note === bellNote);
           const r = bellRefsRef.current[bellNote];
-          if (r && r.current && bell) r.current.src = bell.image2;
+          if (r && r.current) r.current.style.display = 'block';
         } else if (activeTab === 'xylophone' && xyloRef.current) {
           xyloRef.current.press(bellNote);
         } else if (activeTab === 'piano' && pianoRef.current) {
@@ -345,11 +343,9 @@ function FreePlayPage() {
       const drumId = DRUM_KEY_MAP[key];
       if (drumId && !pressedDrums.has(drumId)) {
         pressedDrums.add(drumId);
-        // Swap drum image if on drums tab
         if (activeTab === 'drums') {
-          const info = DRUM_INFO[drumId];
           const r = drumRefsRef.current[drumId];
-          if (r && r.current && info) r.current.src = info.img2;
+          if (r && r.current) r.current.style.display = 'block';
         }
         onDrumDown(drumId);
       }
@@ -360,9 +356,8 @@ function FreePlayPage() {
       if (bellNote) {
         pressedBells.delete(bellNote);
         if (activeTab === 'bells') {
-          const bell = BELLS.find(b => b.note === bellNote);
           const r = bellRefsRef.current[bellNote];
-          if (r && r.current && bell) r.current.src = bell.image1;
+          if (r && r.current) r.current.style.display = 'none';
         } else if (activeTab === 'xylophone' && xyloRef.current) {
           xyloRef.current.release(bellNote);
         } else if (activeTab === 'piano' && pianoRef.current) {
@@ -374,9 +369,8 @@ function FreePlayPage() {
       if (drumId) {
         pressedDrums.delete(drumId);
         if (activeTab === 'drums') {
-          const info = DRUM_INFO[drumId];
           const r = drumRefsRef.current[drumId];
-          if (r && r.current && info) r.current.src = info.img1;
+          if (r && r.current) r.current.style.display = 'none';
         }
         onDrumUp(drumId);
       }
@@ -391,20 +385,18 @@ function FreePlayPage() {
   const startRecording = useCallback(() => { setRecording([]); setIsRecording(true); recordStartRef.current = Date.now(); }, []);
   const stopRecording = useCallback(() => setIsRecording(false), []);
 
-  // Helper to briefly flash an image for playback
+  // Helper to briefly flash the pressed frame for playback (toggles display)
   const flashBell = useCallback((note, ms = 120) => {
-    const bell = BELLS.find(b => b.note === note);
     const r = bellRefsRef.current[note];
-    if (!bell || !r || !r.current) return;
-    r.current.src = bell.image2;
-    setTimeout(() => { if (r.current) r.current.src = bell.image1; }, ms);
+    if (!r || !r.current) return;
+    r.current.style.display = 'block';
+    setTimeout(() => { if (r.current) r.current.style.display = 'none'; }, ms);
   }, []);
   const flashDrum = useCallback((drumId, ms = 120) => {
-    const info = DRUM_INFO[drumId];
     const r = drumRefsRef.current[drumId];
-    if (!info || !r || !r.current) return;
-    r.current.src = info.img2;
-    setTimeout(() => { if (r.current) r.current.src = info.img1; }, ms);
+    if (!r || !r.current) return;
+    r.current.style.display = 'block';
+    setTimeout(() => { if (r.current) r.current.style.display = 'none'; }, ms);
   }, []);
 
   const playBack = useCallback(() => {
