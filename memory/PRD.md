@@ -33,6 +33,7 @@ Build a rhythm game for a music education platform using the user's custom artwo
 - 4-tab selector (Bells, Xylophone, Piano, Drums) with keyboard mappings (1-8 for bells, Q W E A S D X for drums)
 - Record + Playback, Guided "Learn a Song" mode
 - Fun multi-color radial gradient game-board background (replaces white)
+- **Mobile responsive (Feb 2026)**: removed the `.game-board` bounding box; gradient applied directly to the page bg. Bells shrink on narrow viewports (`w-20 sm:w-28 md:w-40 lg:w-48`). Drum kit and xylo/piano wrapped in a `ResponsiveScaler` that JS-measures available width and scales uniformly (never up-scales past 1 — desktop stays full-size).
 
 ### Rhythm Game
 - Bells live AT the target line; falling notes land directly on matching bell

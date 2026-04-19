@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Music, Circle, Square, Play, RotateCcw, ChevronRight } from 'lucide-react';
 import { BELLS, KEY_TO_NOTE } from '../components/JellyBells';
@@ -189,7 +189,7 @@ function PlayableBell({ bell, onDown, onUp, isHighlighted, registerRef, rotation
     <div className="bell-container flex flex-col items-center">
       <div
         data-testid={`bell-${bell.note.replace(' ', '-')}`}
-        className={`bell-instrument relative cursor-pointer select-none flex items-center justify-center w-36 h-36 md:w-44 md:h-44 lg:w-48 lg:h-48 ${isHighlighted ? 'bell-highlight' : ''}`}
+        className={`bell-instrument relative cursor-pointer select-none flex items-center justify-center w-20 h-20 sm:w-28 sm:h-28 md:w-40 md:h-40 lg:w-48 lg:h-48 ${isHighlighted ? 'bell-highlight' : ''}`}
         onPointerDown={doDown}
         onPointerUp={doUp}
         onPointerLeave={doUp}
@@ -287,6 +287,32 @@ function PlayableDrumPiece({ drumId, info, onDown, onUp, style, registerRef }) {
   );
 }
 
+// ============================================================================
+// ResponsiveScaler: scales children down uniformly to fit the available width.
+// Requires explicit nativeWidth/Height to reserve vertical space correctly.
+// Never scales up past 1 (so on wide screens the instrument stays at native size).
+function ResponsiveScaler({ children, nativeWidth, nativeHeight }) {
+  const wrapRef = useRef(null);
+  const [scale, setScale] = useState(1);
+  useLayoutEffect(() => {
+    const compute = () => {
+      if (!wrapRef.current) return;
+      const availW = wrapRef.current.getBoundingClientRect().width;
+      setScale(Math.min(1, availW / nativeWidth));
+    };
+    compute();
+    window.addEventListener('resize', compute);
+    return () => window.removeEventListener('resize', compute);
+  }, [nativeWidth]);
+  return (
+    <div ref={wrapRef} className="w-full flex justify-center" style={{ height: `${nativeHeight * scale}px` }}>
+      <div style={{ width: `${nativeWidth}px`, height: `${nativeHeight}px`, transform: `scale(${scale})`, transformOrigin: 'top center' }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function DrumKitPlayable({ onDrumDown, onDrumUp, registerDrumRef }) {
   // Drum kit scale - sized to fit game board
   const S = 1.65;
@@ -299,8 +325,27 @@ function DrumKitPlayable({ onDrumDown, onDrumUp, registerDrumRef }) {
   const TOMS_DX = 15;
   const TOMS_DY = -8;  // nudged up 10 from +2 — final resting spot on the kick
 
+  // Native kit dimensions (before responsive scaling)
+  const NATIVE_W = Math.round((500 + RIGHT_SHIFT + 30) * S); // ~1007px
+  const NATIVE_H = Math.round(340 * S);                      // ~561px
+
+  // Responsive scaling: measure wrapper width and scale kit to fit
+  const wrapRef = useRef(null);
+  const [scale, setScale] = useState(1);
+  useLayoutEffect(() => {
+    const compute = () => {
+      const w = wrapRef.current?.getBoundingClientRect().width || NATIVE_W;
+      setScale(Math.min(1, w / NATIVE_W));
+    };
+    compute();
+    window.addEventListener('resize', compute);
+    return () => window.removeEventListener('resize', compute);
+  }, [NATIVE_W]);
+
   return (
-    <div className="relative mx-auto" style={{ width: px(500 + RIGHT_SHIFT + 30), height: px(340), transform: 'translateX(-30px)' }}>
+    <div ref={wrapRef} className="w-full flex justify-center" style={{ height: `${NATIVE_H * scale}px` }}>
+      <div style={{ width: `${NATIVE_W}px`, height: `${NATIVE_H}px`, transform: `scale(${scale})`, transformOrigin: 'top center', position: 'relative' }}>
+      <div className="relative mx-auto" style={{ width: px(500 + RIGHT_SHIFT + 30), height: px(340), transform: 'translateX(-30px)' }}>
       <PlayableDrumPiece drumId="crash"  info={DRUM_INFO.crash}  onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
         style={{ left: L(90),  bottom: px(155), height: `${Math.round(130 * S * cymS)}px`, zIndex: 1, badgeLeft: L(145), badgeBottom: px(153) }} />
       <PlayableDrumPiece drumId="ride"   info={DRUM_INFO.ride}   onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
@@ -318,6 +363,8 @@ function DrumKitPlayable({ onDrumDown, onDrumUp, registerDrumRef }) {
         style={{ left: L(252 + TOMS_DX), bottom: px(158 + TOMS_DY * -1), width: px(78), zIndex: 7, badgeLeft: L(284 + TOMS_DX), badgeBottom: px(156 + TOMS_DY * -1) }} />
       <PlayableDrumPiece drumId="snare"  info={DRUM_INFO.snare}  onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
         style={{ left: L(85),  bottom: px(12),  width: px(99),   zIndex: 8, badgeLeft: L(123), badgeBottom: px(10)  }} />
+    </div>
+      </div>
     </div>
   );
 }
@@ -568,7 +615,9 @@ function FreePlayPage() {
 
   return (
     <div className="min-h-screen flex flex-col" data-testid="free-play-page"
-      style={{ backgroundImage: 'url(/assets/backgrounds/clubhouse.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+      style={{
+        background: 'radial-gradient(circle at 15% 20%, rgba(255, 204, 0, 0.28) 0%, transparent 35%), radial-gradient(circle at 85% 25%, rgba(76, 217, 100, 0.28) 0%, transparent 40%), radial-gradient(circle at 50% 90%, rgba(66, 133, 244, 0.28) 0%, transparent 45%), radial-gradient(circle at 25% 80%, rgba(255, 59, 48, 0.22) 0%, transparent 40%), radial-gradient(circle at 75% 75%, rgba(175, 82, 222, 0.22) 0%, transparent 38%), linear-gradient(135deg, #FFF9E6 0%, #FFF4F4 50%, #F0F9FF 100%)'
+      }}>
       <GameHeader title="Free Play" showHomeButton={true} />
       <FullscreenButton />
       <AnimatePresence>{particles.map(p => <ParticleBurst key={p.id} color={p.color} />)}</AnimatePresence>
@@ -630,7 +679,7 @@ function FreePlayPage() {
         )}
 
         {isDrumTab ? (
-          <motion.div className="game-board p-4 md:p-6 w-[95vw] max-w-[1200px] min-h-[560px] md:min-h-[640px] flex items-center justify-center"
+          <motion.div className="w-full max-w-[1200px] flex items-center justify-center px-2"
             initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
             <DrumKitPlayable onDrumDown={onDrumDown} onDrumUp={onDrumUp} registerDrumRef={registerDrumRef} />
           </motion.div>
@@ -645,10 +694,18 @@ function FreePlayPage() {
                 ))}
               </div>
             )}
-            <motion.div className="game-board p-3 md:p-5 w-full max-w-[1400px] flex items-center justify-center" initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
+            <motion.div className="w-full max-w-[1400px] flex items-center justify-center px-2" initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
               {activeTab === 'bells' && <BellCircle onDown={onBellDown} onUp={onBellUp} nextGuidedNote={nextGuidedNote} registerRef={registerBellRef} />}
-              {activeTab === 'xylophone' && <XylophoneInstrument ref={xyloRef} onPlayNote={onBellDown} onNoteUp={onBellUp} highlightedNote={nextGuidedNote} />}
-              {activeTab === 'piano' && <PianoInstrument ref={pianoRef} onPlayNote={onBellDown} onNoteUp={onBellUp} highlightedNote={nextGuidedNote} />}
+              {activeTab === 'xylophone' && (
+                <ResponsiveScaler nativeWidth={840} nativeHeight={440}>
+                  <XylophoneInstrument ref={xyloRef} onPlayNote={onBellDown} onNoteUp={onBellUp} highlightedNote={nextGuidedNote} />
+                </ResponsiveScaler>
+              )}
+              {activeTab === 'piano' && (
+                <ResponsiveScaler nativeWidth={900} nativeHeight={380}>
+                  <PianoInstrument ref={pianoRef} onPlayNote={onBellDown} onNoteUp={onBellUp} highlightedNote={nextGuidedNote} />
+                </ResponsiveScaler>
+              )}
             </motion.div>
           </>
         )}
