@@ -24,7 +24,7 @@ function App() {
 
   return (
     <div className="App min-h-screen">
-      <BrowserRouter>
+      <BrowserRouter basename="/Jelly-JamBox">
         <StickerToast />
         <AnimatePresence mode="wait">
           <Routes>
