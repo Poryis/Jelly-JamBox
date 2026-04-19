@@ -30,7 +30,7 @@ const DRUM_KEY_MAP = { q: 'hihat', w: 'crash', e: 'ride', a: 'snare', s: 'tom', 
 const DRUM_INFO = {
   hihat:  { label: 'Hi-Hat', key: 'Q', color: '#F1C40F', img1: '/assets/drums/Hi hat 1.png', img2: '/assets/drums/Hi hat 2.png' },
   crash:  { label: 'Crash',  key: 'W', color: '#E67E22', img1: '/assets/drums/Crash 1.png',  img2: '/assets/drums/Crash 2.png'  },
-  ride:   { label: 'Ride',   key: 'E', color: '#E74C3C', img1: '/assets/drums/Ride 1.png',   img2: '/assets/drums/Ride 2.png'   },
+  ride:   { label: 'Ride',   key: 'E', color: '#E74C3C', img1: '/assets/drums/Ride 2.png',   img2: '/assets/drums/Ride 1.png'   },
   snare:  { label: 'Snare',  key: 'A', color: '#3498DB', img1: '/assets/drums/Snare 1.png',  img2: '/assets/drums/Snare 2.png'  },
   tom:    { label: 'Tom 1',  key: 'S', color: '#9B59B6', img1: '/assets/drums/tOM 1 1.png',  img2: '/assets/drums/tOM 1 2.png'  },
   lowTom: { label: 'Tom 2',  key: 'D', color: '#1ABC9C', img1: '/assets/drums/tOM 2 1.png',  img2: '/assets/drums/tOM 2 2.png'  },
@@ -347,9 +347,9 @@ function DrumKitPlayable({ onDrumDown, onDrumUp, registerDrumRef }) {
       <div style={{ width: `${NATIVE_W}px`, height: `${NATIVE_H}px`, transform: `scale(${scale})`, transformOrigin: 'top center', position: 'relative' }}>
       <div className="relative mx-auto" style={{ width: px(500 + RIGHT_SHIFT + 30), height: px(340), transform: 'translateX(-30px)' }}>
       <PlayableDrumPiece drumId="crash"  info={DRUM_INFO.crash}  onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
-        style={{ left: L(90),  bottom: px(155), height: `${Math.round(130 * S * cymS)}px`, zIndex: 1, badgeLeft: L(145), badgeBottom: px(153) }} />
+        style={{ left: L(90),  bottom: px(150), height: `${Math.round(130 * S * cymS)}px`, zIndex: 1, badgeLeft: L(145), badgeBottom: px(148) }} />
       <PlayableDrumPiece drumId="ride"   info={DRUM_INFO.ride}   onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
-        style={{ left: L(305), bottom: px(135), height: `${Math.round(160 * S * cymS)}px`, zIndex: 1, badgeLeft: L(380), badgeBottom: px(133) }} />
+        style={{ left: L(325), bottom: px(120), height: `${Math.round(160 * S * cymS)}px`, zIndex: 1, badgeLeft: L(400), badgeBottom: px(118) }} />
       <PlayableDrumPiece drumId="hihat"  info={DRUM_INFO.hihat}  onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
         style={{ left: L(0),   bottom: px(25),  height: px(210), zIndex: 3, badgeLeft: L(30),  badgeBottom: px(23)  }} />
       <PlayableDrumPiece drumId="kick"   info={DRUM_INFO.kick}   onDown={onDrumDown} onUp={onDrumUp} registerRef={registerDrumRef}
